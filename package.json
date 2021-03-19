@@ -1,0 +1,10 @@
+{
+  "name": "dynamodb-model",
+  "version": "1.0.0",
+  "description": "A DynamoDB model with full TypeScript typings",
+  "main": "dist/index.js",
+  "repository": "git@github.com:henhal/dynamodb-model.git",
+  "author": "Henrik Hall <henrik.hall2@gmail.com>",
+  "license": "MIT",
+  "private": false
+}
