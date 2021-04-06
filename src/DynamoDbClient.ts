@@ -1,5 +1,8 @@
 import {buildConditionExpression, buildUpdateExpression, ConditionSet, UpdateAttributes} from 'dynamodb-expressions'
 import {
+  BatchGetCommand,
+  BatchGetCommandInput, BatchWriteCommand,
+  BatchWriteCommandInput,
   DeleteCommand,
   DynamoDBDocumentClient,
   GetCommand, GetCommandInput,
@@ -42,9 +45,9 @@ export interface DeleteParams<T, K extends KeyAttributes<T>> {
   conditions?: ConditionSet<T>;
 }
 
-export interface UpdateParams<T, K extends KeyAttributes<T>> {
+export interface UpdateParams<T, K extends KeyAttributes<T>, A extends keyof T> {
   key: KeyValue<T, K>;
-  attributes: UpdateAttributes<T>;
+  attributes: UpdateAttributes<Pick<T, A>>;
   conditions?: ConditionSet<T>;
 }
 
@@ -60,7 +63,7 @@ function createGetCommand<T, K extends KeyAttributes<T>, P extends keyof T>(
   };
 }
 
-function createScanCommand<T, N extends string, P extends keyof T, F extends keyof T>(
+function createScanRequest<T, N extends string, P extends keyof T, F extends keyof T>(
     model: DynamoDBModel<T>,
     params: ScanParams<T, N, P, F>,
 ) {
@@ -78,7 +81,7 @@ function createScanCommand<T, N extends string, P extends keyof T, F extends key
   };
 }
 
-function createQueryCommand<T, N extends string, P extends keyof T, I extends keyof T>(
+function createQueryRequest<T, N extends string, P extends keyof T, I extends keyof T>(
     model: DynamoDBModel<T>,
     params: QueryParams<T, N, P, I>
 ) {
@@ -116,9 +119,9 @@ function createPutRequest<T, A extends keyof T>(
   };
 }
 
-function createUpdateRequest<T, K extends KeyAttributes<T>>(
+function createUpdateRequest<T, K extends KeyAttributes<T>, A extends keyof T>(
     model: DynamoDBModel<T, K>,
-    params: UpdateParams<T, K>
+    params: UpdateParams<T, K, A>
 ) {
   const attr = {};
   const {key, attributes, conditions} = params;
@@ -174,6 +177,7 @@ abstract class DynamoDbWrapper {
 class DynamoDbTransaction extends DynamoDbWrapper {
   private readonly items: NonNullable<TransactWriteCommandInput['TransactItems']> = [];
 
+  // TODO follow batch style with {model, params} or perhaps change batch statements to use execute repeatedly to get remaining items
   put<T, K extends KeyAttributes<T>, B>(
       model: DynamoDBModel<T, K>,
       ...paramsList: Array<PutParams<T, Exclude<keyof T, keyof B>>>
@@ -183,9 +187,9 @@ class DynamoDbTransaction extends DynamoDbWrapper {
     return this;
   }
 
-  update<T, K extends KeyAttributes<T>>(
-      model: DynamoDBModel<T, K>,
-      ...paramsList: Array<UpdateParams<T, K>>
+  update<T, K extends KeyAttributes<T>, B>(
+      model: DynamoDBModel<T, K, any, B>,
+      ...paramsList: Array<UpdateParams<T, K, Exclude<keyof T, keyof B>>>
   ): DynamoDbTransaction {
     this.items.push(...paramsList.map(params => ({Update: createUpdateRequest(model, params)})));
 
@@ -214,22 +218,121 @@ class DynamoDbTransaction extends DynamoDbWrapper {
 
 }
 
-class DynamoDbBatchGetStatement extends DynamoDbWrapper {
-  get<T, K extends KeyAttributes<T>>(
-      model: DynamoDBModel<T, K>,
-      keys: Array<GetParams<T, K>>
-  ): DynamoDbBatchGetStatement {
-    const {Responses: {[this.tableName]: items = []} = {}} = await this.ddb.batchGet({
-      RequestItems: {
-        [this.tableName]: {Keys: keys}
-      },
-    });
+type BatchItem<T = unknown> = {
+  model: DynamoDBModel<T>;
+  item: T;
+};
 
-    return {items: items as T[]};
+type BatchGetRequest<T, K extends KeyAttributes<T>, P extends keyof T> = {
+  model: DynamoDBModel<T, K>,
+  params: GetParams<T, K, P>;
+};
+
+// TODO change to get(model, ...params) and execute(pageToken?)
+// The unprocessed keys are stored in a Map<pageToken, ...>
+class DynamoDbBatchGetStatement extends DynamoDbWrapper {
+  private readonly requestMap: NonNullable<BatchGetCommandInput['RequestItems']> = {};
+  private readonly modelMap = new Map<string, DynamoDBModel<unknown>>();
+
+  get<T, K extends KeyAttributes<T>, P extends keyof T>(
+      requests: Array<BatchGetRequest<T, K, P>>
+  ): DynamoDbBatchGetStatement {
+    for (const {model, params} of requests) {
+      const {Keys: keys = []} = this.requestMap[model.tableName] ?? {};
+      keys.push(createGetCommand(model, params));
+      this.modelMap.set(model.tableName, model);
+      this.requestMap[model.tableName] = {Keys: keys};
+    }
+
+    return this;
+  }
+
+  // TODO change to execute()
+  async commit(): Promise<{items: Array<BatchItem>, requests: Array<BatchGetRequest<any, any, any>>}> {
+    const {Responses: responses = {}, UnprocessedKeys: unprocessedRequests = {}} = await this.dc.send(new BatchGetCommand({RequestItems: this.requestMap}));
+    const items: Array<BatchItem> = [];
+
+    for (const [tableName, tableItems] of Object.entries(responses)) {
+      const model = this.modelMap.get(tableName) as DynamoDBModel<unknown>;
+
+      for (const item of tableItems) {
+        items.push({model, item});
+      }
+    }
+
+    const requests: Array<BatchGetRequest<any, any, any>> = [];
+
+    for (const [tableName, {Keys: keys = [], ProjectionExpression: projectionExpression}] of Object.entries(unprocessedRequests)) {
+      const model = this.modelMap.get(tableName) as DynamoDBModel<unknown>;
+
+      for (const key of keys) {
+        requests.push({model, params: {key, projection: projectionExpression?.split(', ')}});
+      }
+    }
+
+    return {items, requests};
   }
 }
 
+type BatchPutRequest<T, K extends KeyAttributes<T>, B> = {
+  model: DynamoDBModel<T, K, any, B>;
+  params: Pick<PutParams<T, Exclude<keyof T, keyof B>>, 'item'>;
+};
+
+type BatchDeleteRequest<T, K extends KeyAttributes<T>> = {
+  model: DynamoDBModel<T, K>;
+  params: Pick<DeleteParams<T, K>, 'key'>;
+};
+
 class DynamoDbBatchWriteStatement extends DynamoDbWrapper {
+  private readonly requestMap: NonNullable<BatchWriteCommandInput['RequestItems']> = {};
+  private readonly modelMap = new Map<string, DynamoDBModel<unknown>>();
+
+  put<T, K extends KeyAttributes<T>, B>(
+      ...requests: Array<BatchPutRequest<T, K, B>>
+  ): DynamoDbBatchWriteStatement {
+    for (const {model, params} of requests) {
+      const requestItems = this.requestMap[model.tableName] ?? [];
+      requestItems.push(createPutRequest(model, params));
+      this.modelMap.set(model.tableName, model);
+      this.requestMap[model.tableName] = requestItems;
+    }
+
+    return this;
+  }
+
+  delete<T, K extends KeyAttributes<T>>(
+      ...requests: Array<BatchDeleteRequest<T, K>>
+  ): DynamoDbBatchWriteStatement {
+    for (const {model, params} of requests) {
+      const requestItems = this.requestMap[model.tableName] ?? [];
+      requestItems.push(createDeleteRequest(model, params));
+      this.modelMap.set(model.tableName, model);
+      this.requestMap[model.tableName] = requestItems;
+    }
+
+    return this;
+  }
+
+  async commit(): Promise<{requests: Array<BatchPutRequest<any, any, any> | BatchDeleteRequest<any, any>>}> {
+    const {UnprocessedItems: requestMap = {}} = await this.dc.send(new BatchWriteCommand({RequestItems: this.requestMap}));
+
+    const requests: Array<BatchPutRequest<any, any, any> | BatchDeleteRequest<any, any>> = [];
+
+    for (const [tableName, requestItems] of Object.entries(requestMap)) {
+      const model = this.modelMap.get(tableName) as DynamoDBModel<unknown>;
+
+      for (const requestItem of requestItems) {
+        if (requestItem.PutRequest?.Item) {
+          requests.push({model, params: {item: requestItem.PutRequest.Item}});
+        } else if (requestItem.DeleteRequest?.Key) {
+          requests.push({model, params: {key: requestItem.DeleteRequest.Key}});
+        }
+      }
+    }
+
+    return {requests};
+  }
 }
 
 type KeyAttributes<T> = [keyof T] | [keyof T, keyof T];
@@ -260,7 +363,7 @@ class DynamoDBModelBuilder<T, K extends KeyAttributes<T> = never, I extends KeyI
     indices: {} as I
   };
 
-  constructor(dc: DynamoDBDocumentClient, readonly tableName: string) {
+  constructor(dc: DynamoDBDocumentClient, readonly name: string, readonly tableName: string) {
     super(dc);
   }
 
@@ -289,7 +392,7 @@ class DynamoDBModelBuilder<T, K extends KeyAttributes<T> = never, I extends KeyI
 
   //withCreator<_B, U = Omit<T, keyof _B>>(creator: (item: U) => _B) {
   withCreator<_B>(creator: (item: any) => _B) {
-    const builder = this as unknown as DynamoDBModelBuilder<T, K, I, _B>;
+    const builder = this as unknown as DynamoDBModelBuilder<T & B, K, I, _B>;
 
     builder.params.creator = creator;
 
@@ -311,7 +414,7 @@ class DynamoDBModelBuilder<T, K extends KeyAttributes<T> = never, I extends KeyI
   }
 
   build(): DynamoDBModel<T, K, I, B> {
-    return new DynamoDBModel(this.dc, this.tableName, this.params);
+    return new DynamoDBModel(this.dc, this.name, this.tableName, this.params);
   }
 }
 
@@ -319,8 +422,8 @@ export class DynamoDbClient {
   constructor(readonly dc: DynamoDBDocumentClient) {
   }
 
-  model<T>(tableName: string): DynamoDBModelBuilder<T> {
-    return new DynamoDBModelBuilder<T>(this.dc, tableName);
+  model<T>(name: string, tableName: string = name): DynamoDBModelBuilder<T> {
+    return new DynamoDBModelBuilder<T>(this.dc, name, tableName);
   }
 
   transaction(): DynamoDbTransaction {
@@ -350,22 +453,22 @@ type WriteItem<T, B> = Omit<T, keyof B>;
 type ReadItem<T, B> = WriteItem<T, B> & B;
 
 export class DynamoDBModel<T, K extends KeyAttributes<T> = any, I extends KeyIndices<T> = any, B = any> extends DynamoDbWrapper {
-  constructor(readonly dc: DynamoDBDocumentClient, readonly tableName: string, readonly params: ModelParams<T, K, I, B>) {
+  constructor(readonly dc: DynamoDBDocumentClient, readonly name: string, readonly tableName: string, readonly params: ModelParams<T, K, I, B>) {
     super(dc);
   }
 
   async get<P extends keyof T>(
       params: GetParams<T, K, P>
-  ): Promise<ReadItem<T, B> | undefined> {
+  ): Promise<T | undefined> {
     const {Item: item} = await this.send(new GetCommand(createGetCommand(this, params)));
 
-    return item as ReadItem<T, B> | undefined;
+    return item as T | undefined;
   }
 
   async scan<N extends string, P extends keyof T>(
       params: ScanParams<T, N, P> = {}
   ): Promise<ScanResult<T, P>> {
-    const {Items: items = [], LastEvaluatedKey: lastKey} = await this.send(new ScanCommand(createScanCommand(this, params)));
+    const {Items: items = [], LastEvaluatedKey: lastKey} = await this.send(new ScanCommand(createScanRequest(this, params)));
 
     return {
       items: items as Array<Pick<T, P>>,
@@ -376,7 +479,7 @@ export class DynamoDBModel<T, K extends KeyAttributes<T> = any, I extends KeyInd
   async query<N extends string, P extends keyof T>(
       params: QueryParams<T, N, P, Key<T, N extends keyof I ? I[N] : K>>
   ): Promise<ScanResult<T, P>> {
-    const {Items: items = [], LastEvaluatedKey: lastKey} = await this.send(new QueryCommand(createQueryCommand(this, params)));
+    const {Items: items = [], LastEvaluatedKey: lastKey} = await this.send(new QueryCommand(createQueryRequest(this, params)));
 
     return {
       items: items as Array<Pick<T, P>>,
@@ -395,7 +498,7 @@ export class DynamoDBModel<T, K extends KeyAttributes<T> = any, I extends KeyInd
   }
 
   async update(
-      params: UpdateParams<T, K>
+      params: UpdateParams<T, K, Exclude<keyof T, keyof B>>
   ): Promise<{item: T}> {
     const {Attributes: item} = await this.send(new UpdateCommand(createUpdateRequest(this, params)));
 
@@ -421,7 +524,8 @@ type Person = {
 
 async function foo() {
 
-  const model = new DynamoDbClient(null as any).model<Person>('persons')
+  const client = new DynamoDbClient(null as any);
+  const model = client.model<Person>('persons')
       .withKey('id', 'email')
       .withIndex('foo-index', 'name', 'age')
       .withIndex('bar-index', 'age')
@@ -429,6 +533,11 @@ async function foo() {
       .withCreator(x => ({id: x.email.reverse() as string, createdTime: new Date().toJSON(), modifiedTime: new Date().toJSON()}))
       .withUpdater(x => ({modifiedTime: new Date().toJSON()}))
       .build();
+
+  //client.batchWrite().put({model, params: {item}
+  await client.transaction().put(model, {item: {id: '', email:'',name:''}}).delete(model, {key: {id: '', email: ''}}).commit();
+
+  //new DynamoDbBatchGetStatement(null as any).get([{model, params: {key: {id: '', email:''}, projection: ['id']}}])
 
   const item = await model.get({key: {id: 'a', email: 'foo'}});
 
