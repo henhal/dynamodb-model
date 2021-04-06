@@ -179,7 +179,7 @@ class DynamoDbTransaction extends DynamoDbWrapper {
 
   // TODO follow batch style with {model, params} or perhaps change batch statements to use execute repeatedly to get remaining items
   put<T, K extends KeyAttributes<T>, B>(
-      model: DynamoDBModel<T, K>,
+      model: DynamoDBModel<T, K, any,B>,
       ...paramsList: Array<PutParams<T, Exclude<keyof T, keyof B>>>
   ): DynamoDbTransaction {
     this.items.push(...paramsList.map(params => ({Put: createPutRequest(model, params)})));
@@ -223,21 +223,14 @@ type BatchItem<T = unknown> = {
   item: T;
 };
 
-type BatchGetRequest<T, K extends KeyAttributes<T>, P extends keyof T> = {
-  model: DynamoDBModel<T, K>,
-  params: GetParams<T, K, P>;
-};
-
-// TODO change to get(model, ...params) and execute(pageToken?)
-// The unprocessed keys are stored in a Map<pageToken, ...>
 class DynamoDbBatchGetStatement extends DynamoDbWrapper {
-  private readonly requestMap: NonNullable<BatchGetCommandInput['RequestItems']> = {};
+  private requestMap: NonNullable<BatchGetCommandInput['RequestItems']> = {};
   private readonly modelMap = new Map<string, DynamoDBModel<unknown>>();
 
   get<T, K extends KeyAttributes<T>, P extends keyof T>(
-      requests: Array<BatchGetRequest<T, K, P>>
+      model: DynamoDBModel<T, K>, ...paramsList: Array<GetParams<T, K, P>>
   ): DynamoDbBatchGetStatement {
-    for (const {model, params} of requests) {
+    for (const params of paramsList) {
       const {Keys: keys = []} = this.requestMap[model.tableName] ?? {};
       keys.push(createGetCommand(model, params));
       this.modelMap.set(model.tableName, model);
@@ -247,12 +240,12 @@ class DynamoDbBatchGetStatement extends DynamoDbWrapper {
     return this;
   }
 
-  // TODO change to execute()
-  async commit(): Promise<{items: Array<BatchItem>, requests: Array<BatchGetRequest<any, any, any>>}> {
-    const {Responses: responses = {}, UnprocessedKeys: unprocessedRequests = {}} = await this.dc.send(new BatchGetCommand({RequestItems: this.requestMap}));
+  async execute(): Promise<{items: Array<BatchItem>; done: boolean}> {
+    const {Responses: itemMap = {}, UnprocessedKeys: requestMap} = await this.dc.send(new BatchGetCommand({RequestItems: this.requestMap}));
     const items: Array<BatchItem> = [];
+    let done = true;
 
-    for (const [tableName, tableItems] of Object.entries(responses)) {
+    for (const [tableName, tableItems] of Object.entries(itemMap)) {
       const model = this.modelMap.get(tableName) as DynamoDBModel<unknown>;
 
       for (const item of tableItems) {
@@ -260,38 +253,35 @@ class DynamoDbBatchGetStatement extends DynamoDbWrapper {
       }
     }
 
-    const requests: Array<BatchGetRequest<any, any, any>> = [];
+    if (requestMap) {
+      this.requestMap = requestMap;
 
-    for (const [tableName, {Keys: keys = [], ProjectionExpression: projectionExpression}] of Object.entries(unprocessedRequests)) {
-      const model = this.modelMap.get(tableName) as DynamoDBModel<unknown>;
-
-      for (const key of keys) {
-        requests.push({model, params: {key, projection: projectionExpression?.split(', ')}});
-      }
+      done = false;
     }
 
-    return {items, requests};
+    return {items, done};
   }
 }
 
-type BatchPutRequest<T, K extends KeyAttributes<T>, B> = {
-  model: DynamoDBModel<T, K, any, B>;
-  params: Pick<PutParams<T, Exclude<keyof T, keyof B>>, 'item'>;
-};
-
-type BatchDeleteRequest<T, K extends KeyAttributes<T>> = {
-  model: DynamoDBModel<T, K>;
-  params: Pick<DeleteParams<T, K>, 'key'>;
-};
+// type BatchPutRequest<T, K extends KeyAttributes<T>, B> = {
+//   model: DynamoDBModel<T, K, any, B>;
+//   params: Pick<PutParams<T, Exclude<keyof T, keyof B>>, 'item'>;
+// };
+//
+// type BatchDeleteRequest<T, K extends KeyAttributes<T>> = {
+//   model: DynamoDBModel<T, K>;
+//   params: Pick<DeleteParams<T, K>, 'key'>;
+// };
 
 class DynamoDbBatchWriteStatement extends DynamoDbWrapper {
-  private readonly requestMap: NonNullable<BatchWriteCommandInput['RequestItems']> = {};
+  private requestMap: NonNullable<BatchWriteCommandInput['RequestItems']> = {};
   private readonly modelMap = new Map<string, DynamoDBModel<unknown>>();
 
   put<T, K extends KeyAttributes<T>, B>(
-      ...requests: Array<BatchPutRequest<T, K, B>>
+      model: DynamoDBModel<T, K, any, B>,
+      ...paramsList: Array<Pick<PutParams<T, Exclude<keyof T, keyof B>>, 'item'>>
   ): DynamoDbBatchWriteStatement {
-    for (const {model, params} of requests) {
+    for (const params of paramsList) {
       const requestItems = this.requestMap[model.tableName] ?? [];
       requestItems.push(createPutRequest(model, params));
       this.modelMap.set(model.tableName, model);
@@ -302,9 +292,10 @@ class DynamoDbBatchWriteStatement extends DynamoDbWrapper {
   }
 
   delete<T, K extends KeyAttributes<T>>(
-      ...requests: Array<BatchDeleteRequest<T, K>>
+      model: DynamoDBModel<T, K>,
+      ...paramsList: Array<Pick<DeleteParams<T, K>, 'key'>>
   ): DynamoDbBatchWriteStatement {
-    for (const {model, params} of requests) {
+    for (const params of paramsList) {
       const requestItems = this.requestMap[model.tableName] ?? [];
       requestItems.push(createDeleteRequest(model, params));
       this.modelMap.set(model.tableName, model);
@@ -314,24 +305,16 @@ class DynamoDbBatchWriteStatement extends DynamoDbWrapper {
     return this;
   }
 
-  async commit(): Promise<{requests: Array<BatchPutRequest<any, any, any> | BatchDeleteRequest<any, any>>}> {
-    const {UnprocessedItems: requestMap = {}} = await this.dc.send(new BatchWriteCommand({RequestItems: this.requestMap}));
+  async execute(): Promise<{done: boolean;}> {
+    const {UnprocessedItems: requestMap} = await this.dc.send(new BatchWriteCommand({RequestItems: this.requestMap}));
+    let done = true;
 
-    const requests: Array<BatchPutRequest<any, any, any> | BatchDeleteRequest<any, any>> = [];
-
-    for (const [tableName, requestItems] of Object.entries(requestMap)) {
-      const model = this.modelMap.get(tableName) as DynamoDBModel<unknown>;
-
-      for (const requestItem of requestItems) {
-        if (requestItem.PutRequest?.Item) {
-          requests.push({model, params: {item: requestItem.PutRequest.Item}});
-        } else if (requestItem.DeleteRequest?.Key) {
-          requests.push({model, params: {key: requestItem.DeleteRequest.Key}});
-        }
-      }
+    if (requestMap) {
+      this.requestMap = requestMap;
+      done = false;
     }
 
-    return {requests};
+    return {done};
   }
 }
 
@@ -534,8 +517,14 @@ async function foo() {
       .withUpdater(x => ({modifiedTime: new Date().toJSON()}))
       .build();
 
-  //client.batchWrite().put({model, params: {item}
-  await client.transaction().put(model, {item: {id: '', email:'',name:''}}).delete(model, {key: {id: '', email: ''}}).commit();
+  const {done} = await client.batchWrite()
+      .put(model, {item: {email:'', name:''}})
+      .execute();
+
+  await client.transaction()
+      .put(model, {item: {email:'',name:''}})
+      .delete(model, {key: {id: '', email: ''}})
+      .commit();
 
   //new DynamoDbBatchGetStatement(null as any).get([{model, params: {key: {id: '', email:''}, projection: ['id']}}])
 
