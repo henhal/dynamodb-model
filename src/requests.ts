@@ -24,9 +24,9 @@ export function createGetRequest<T, K extends KeyAttributes<T>, P extends keyof 
   };
 }
 
-export function createScanRequest<T, N extends string, P extends keyof T, F extends keyof T>(
+export function createScanRequest<T, P extends keyof T, N extends string, F extends keyof T>(
     model: DynamoModel<T>,
-    params: ScanParams<T, N, P, F>,
+    params: ScanParams<T, P, N, F>,
 ) {
   const attr = {};
   const {indexName, filterConditions, pageToken, limit, projection} = params;
@@ -42,9 +42,9 @@ export function createScanRequest<T, N extends string, P extends keyof T, F exte
   };
 }
 
-export function createQueryRequest<T, N extends string, P extends keyof T, I extends keyof T>(
+export function createQueryRequest<T, P extends keyof T, N extends string, I extends keyof T>(
     model: DynamoModel<T>,
-    params: QueryParams<T, N, P, I>
+    params: QueryParams<T, P, N, I>
 ) {
   const attr = {};
   const {indexName, keyConditions, filterConditions, projection, limit, ascending, pageToken} = params;

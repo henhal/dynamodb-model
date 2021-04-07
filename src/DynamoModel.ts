@@ -40,8 +40,8 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
     return item as T | undefined;
   }
 
-  async scan<N extends string, P extends keyof T>(
-      params: ScanParams<T, N, P> = {}
+  async scan<P extends keyof T, N extends string, >(
+      params: ScanParams<T, P, N> = {}
   ): Promise<ScanResult<T, P>> {
     const {Items: items = [], LastEvaluatedKey: lastKey} = await this.command(
         new ScanCommand(createScanRequest(this, params)),
@@ -53,8 +53,8 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
     };
   }
 
-  async query<N extends string, P extends keyof T>(
-      params: QueryParams<T, N, P, Key<T, N extends keyof I ? I[N] : K>>
+  async query<P extends keyof T, N extends string>(
+      params: QueryParams<T, P, N, Key<T, N extends keyof I ? I[N] : K>>
   ): Promise<ScanResult<T, P>> {
 
     const {Items: items = [], LastEvaluatedKey: lastKey} = await this.command(

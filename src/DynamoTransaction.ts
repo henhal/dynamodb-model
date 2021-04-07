@@ -51,17 +51,21 @@ export class DynamoTransactionProxy extends DynamoWrapper {
 export abstract class DynamoTransaction extends DynamoWrapper {
   err?: any;
 
-  private static isTransactionCancelled(err: any): err is TransactionCanceledException {
+  static isTransactionCancelled(err: any): err is TransactionCanceledException {
     return err?.name === 'TransactionCanceledException';
   }
 
-  transactionCancelled(): boolean {
+  static conditionalCheckFailed(err: any): boolean {
+    return !!(DynamoTransaction.isTransactionCancelled(err) &&
+        err.CancellationReasons?.some(r => r.Code === 'ConditionalCheckFailed'));
+  }
+
+  isTransactionCancelled(): boolean {
     return DynamoTransaction.isTransactionCancelled(this.err);
   }
 
   conditionalCheckFailed(): boolean {
-    return !!(DynamoTransaction.isTransactionCancelled(this.err) &&
-        this.err.CancellationReasons?.some(r => r.Code === 'ConditionalCheckFailed'));
+    return DynamoTransaction.conditionalCheckFailed(this.err);
   }
 }
 

@@ -29,7 +29,7 @@ export type ModelParams<T, K extends KeyAttributes<T>, I extends KeyIndices<T>, 
   triggers: Array<Trigger<T, K>>;
 };
 
-export interface GetParams<T, K extends KeyAttributes<T>, P extends keyof T> {
+export interface GetParams<T, K extends KeyAttributes<T>, P extends keyof T = keyof T> {
   key: KeyValue<T, K>;
   projection?: Array<P>;
 }
@@ -39,7 +39,7 @@ export interface ScanResult<T, P extends keyof T = keyof T> {
   nextPageToken?: string
 }
 
-export interface ScanParams<T, N extends string, P extends keyof T = keyof T, F extends keyof T = keyof T> {
+export interface ScanParams<T, P extends keyof T = keyof T, N extends string = string, F extends keyof T = keyof T> {
   indexName?: N;
   pageToken?: string;
   limit?: number;
@@ -48,8 +48,8 @@ export interface ScanParams<T, N extends string, P extends keyof T = keyof T, F 
 }
 
 // Filter on query may not include key attributes
-export interface QueryParams<T, N extends string, P extends keyof T, I extends keyof T> extends
-    ScanParams<T, N, P, Exclude<keyof T, I>> {
+export interface QueryParams<T, P extends keyof T = keyof T, N extends string = string, I extends keyof T = keyof T>
+    extends ScanParams<T, P, N, Exclude<keyof T, I>> {
   keyConditions: ConditionSet<T, I>;
   ascending?: boolean;
 }
