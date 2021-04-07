@@ -1,4 +1,4 @@
-# dynamodb-model
+# dynamodb-ts-model
 A DynamoDB model implementation with full TypeScript type support.
 
 This module allows you to create fully type-safe DynamoDB models describing your data,
