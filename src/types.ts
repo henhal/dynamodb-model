@@ -1,4 +1,5 @@
 import {ConditionSet, UpdateAttributes} from 'dynamodb-expressions';
+import {DynamoModel} from './DynamoModel';
 
 // An item that can be put or updated.
 // Note that B is _allowed_ to be written but could be overwritten by creators/updaters.
@@ -17,7 +18,8 @@ export type KeyValue<T, K extends KeyAttributes<T>> = Pick<T, Key<T, K>>;
 export type KeyIndices<T> = Record<string, KeyAttributes<T>>;
 
 export type TriggerCommand = 'put' | 'update' | 'delete';
-export type Trigger<T, K extends KeyAttributes<T>> = (key: KeyValue<T, K>, command: TriggerCommand) => void;
+export type Trigger<T, K extends KeyAttributes<T>> =
+    (key: KeyValue<T, K>, command: TriggerCommand, model: DynamoModel<T, K>) => void;
 
 export type ModelParams<T, K extends KeyAttributes<T>, I extends KeyIndices<T>, B> = {
   keyAttributes?: K;

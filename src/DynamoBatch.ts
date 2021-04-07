@@ -128,7 +128,7 @@ export class DynamoBatchWriteStatement extends DynamoWrapper {
         const keyValue = JSON.stringify(getKeyValues(key, model.params.keyAttributes));
 
         if (!nextKeyValues?.some(v => v === keyValue)) {
-          model.params.triggers.forEach(trigger => trigger(key, command));
+          model.params.triggers.forEach(trigger => trigger(key, command, model));
         }
       }
     }

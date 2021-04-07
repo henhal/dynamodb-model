@@ -1,5 +1,5 @@
 {
-  "name": "dynamodb-model",
+  "name": "dynamodb-ts-model",
   "version": "1.0.0",
   "description": "A DynamoDB model/client with full TypeScript typings",
   "main": "dist/index.js",
@@ -30,7 +30,7 @@
     "build": "tsc",
     "clean": "rm -rf dist && rm -f tsconfig.tsbuildinfo",
     "lint": "eslint src --ext js,ts --max-warnings 0",
-    "prepublish": "yarn clean && yarn build && yarn test",
+    "_prepublish": "yarn clean && yarn build && yarn test",
     "test": "NODE_PATH=src LOG_LEVEL=${LOG_LEVEL:=error} jest --config src/test/jest.config.js"
   },
   "keywords": [

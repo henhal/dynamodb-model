@@ -147,7 +147,7 @@ export class DynamoWriteTransaction extends DynamoTransaction {
       const {tableName, key, command} = parseRequest(item)
       const model = this.modelMap.get(tableName!);
 
-      model?.params.triggers.forEach(trigger => trigger(key, command));
+      model?.params.triggers.forEach(trigger => trigger(key, command, model));
     });
   }
 }

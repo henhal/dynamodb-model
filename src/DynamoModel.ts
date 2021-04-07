@@ -75,7 +75,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
         (dc, cmd) => dc.send(cmd));
     const item = params.item as T;
 
-    this.params.triggers.forEach(trigger => trigger(item, 'put'));
+    this.params.triggers.forEach(trigger => trigger(item, 'put', this));
 
     return {item};
   }
@@ -88,7 +88,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
         (dc, cmd) => dc.send(cmd));
     const item = attributes as T;
 
-    this.params.triggers.forEach(trigger => trigger(item, 'update'));
+    this.params.triggers.forEach(trigger => trigger(item, 'update', this));
 
     return {item};
   }
@@ -101,7 +101,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
         (dc, cmd) => dc.send(cmd));
     const item = attributes as T;
 
-    this.params.triggers.forEach(trigger => trigger(item, 'delete'));
+    this.params.triggers.forEach(trigger => trigger(item, 'delete', this));
   }
 }
 
