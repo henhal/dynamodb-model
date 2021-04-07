@@ -215,13 +215,34 @@ class DynamoDbTransaction extends DynamoDbWrapper {
     return err.name === 'TransactionCanceledException' && (err as TransactionCanceledException)
         .CancellationReasons?.some(r => r.Code === 'ConditionalCheckFailed');
   }
-
 }
 
 type BatchItem<T = unknown> = {
   model: DynamoDBModel<T>;
   item: T;
 };
+
+class DynamoDbBatchStatement extends DynamoDbWrapper {
+  get<T, K extends KeyAttributes<T>, P extends keyof T>(
+      model: DynamoDBModel<T, K>, ...paramsList: Array<GetParams<T, K, P>>
+  ): DynamoDbBatchGetStatement {
+    return new DynamoDbBatchGetStatement(this.dc).get(model, ...paramsList);
+  }
+
+  put<T, K extends KeyAttributes<T>, B>(
+      model: DynamoDBModel<T, K, any, B>,
+      ...paramsList: Array<Pick<PutParams<T, Exclude<keyof T, keyof B>>, 'item'>>
+  ): DynamoDbBatchWriteStatement {
+    return new DynamoDbBatchWriteStatement(this.dc).put(model, ...paramsList);
+  }
+
+  delete<T, K extends KeyAttributes<T>>(
+      model: DynamoDBModel<T, K>,
+      ...paramsList: Array<Pick<DeleteParams<T, K>, 'key'>>
+  ): DynamoDbBatchWriteStatement {
+    return new DynamoDbBatchWriteStatement(this.dc).delete(model, ...paramsList);
+  }
+}
 
 class DynamoDbBatchGetStatement extends DynamoDbWrapper {
   private requestMap: NonNullable<BatchGetCommandInput['RequestItems']> = {};
@@ -262,16 +283,6 @@ class DynamoDbBatchGetStatement extends DynamoDbWrapper {
     return {items, done};
   }
 }
-
-// type BatchPutRequest<T, K extends KeyAttributes<T>, B> = {
-//   model: DynamoDBModel<T, K, any, B>;
-//   params: Pick<PutParams<T, Exclude<keyof T, keyof B>>, 'item'>;
-// };
-//
-// type BatchDeleteRequest<T, K extends KeyAttributes<T>> = {
-//   model: DynamoDBModel<T, K>;
-//   params: Pick<DeleteParams<T, K>, 'key'>;
-// };
 
 class DynamoDbBatchWriteStatement extends DynamoDbWrapper {
   private requestMap: NonNullable<BatchWriteCommandInput['RequestItems']> = {};
@@ -365,15 +376,6 @@ class DynamoDBModelBuilder<T, K extends KeyAttributes<T> = never, I extends KeyI
     return builder;
   }
 
-  // withIndex2<_I extends KeyIndices<T>>(name: keyof _I, ...indexAttributes: _I[keyof _I]): DynamoDBModelBuilder<T, K, I & _I> {
-  //   const builder = this as unknown as DynamoDBModelBuilder<T, K, I & _I>;
-  //
-  //   builder.params.indices[name] = indexAttributes as any;
-  //
-  //   return builder;
-  // }
-
-  //withCreator<_B, U = Omit<T, keyof _B>>(creator: (item: U) => _B) {
   withCreator<_B>(creator: (item: any) => _B) {
     const builder = this as unknown as DynamoDBModelBuilder<T & B, K, I, _B>;
 
@@ -388,12 +390,6 @@ class DynamoDBModelBuilder<T, K extends KeyAttributes<T> = never, I extends KeyI
     builder.params.updater = updater;
 
     return builder;
-  }
-
-
-  withSchema(schema: AttributeSchema<T>) {
-    // Optional but required for model.createTable()
-    // TODO
   }
 
   build(): DynamoDBModel<T, K, I, B> {
@@ -413,12 +409,8 @@ export class DynamoDbClient {
     return new DynamoDbTransaction(this.dc);
   }
 
-  batchGet(): DynamoDbBatchGetStatement {
-    return new DynamoDbBatchGetStatement(this.dc);
-  }
-
-  batchWrite(): DynamoDbBatchWriteStatement {
-    return new DynamoDbBatchWriteStatement(this.dc);
+  batch(): DynamoDbBatchStatement {
+    return new DynamoDbBatchStatement(this.dc);
   }
 }
 
@@ -495,67 +487,4 @@ export class DynamoDBModel<T, K extends KeyAttributes<T> = any, I extends KeyInd
   ): Promise<void> {
     await this.send(new DeleteCommand(createDeleteRequest(this, params)));
   }
-
 }
-
-type Person = {
-  id: string;
-  name: string;
-  email: string;
-  age?: number;
-};
-
-async function foo() {
-
-  const client = new DynamoDbClient(null as any);
-  const model = client.model<Person>('persons')
-      .withKey('id', 'email')
-      .withIndex('foo-index', 'name', 'age')
-      .withIndex('bar-index', 'age')
-      .withIndex('foo', 'email')
-      .withCreator(x => ({id: x.email.reverse() as string, createdTime: new Date().toJSON(), modifiedTime: new Date().toJSON()}))
-      .withUpdater(x => ({modifiedTime: new Date().toJSON()}))
-      .build();
-
-  const {done} = await client.batchWrite()
-      .put(model, {item: {email:'', name:''}})
-      .execute();
-
-  await client.transaction()
-      .put(model, {item: {email:'',name:''}})
-      .delete(model, {key: {id: '', email: ''}})
-      .commit();
-
-  //new DynamoDbBatchGetStatement(null as any).get([{model, params: {key: {id: '', email:''}, projection: ['id']}}])
-
-  const item = await model.get({key: {id: 'a', email: 'foo'}});
-
-  await model.query({indexName: 'foo-index', keyConditions: {name: '', age: 45}})
-  await model.query({indexName: 'bar-index', keyConditions: {age: 45}})
-  await model.query({keyConditions: {id: 'a'}})
-
-  //const x: PutParams<Person, Exclude<keyof Person, never>> = {item: {name: 'foo', id: 'foo', email: 'foo'}};
-  //const x: PutParams<Person, keyof Record<string, never>> = {item: {}};
-
-  await model.put({item: {name: 'FOO', email: 'foo@bar.com', age:45}})
-}
-
-class Something<T> {
-  constructor(readonly value: T) {
-  }
-}
-
-type Foo<T, K extends keyof any = keyof any> = {
-  [P in Extract<keyof T, K>]?: Something<T[P]>;
-} & {
-  [P in Exclude<K, keyof T>]?: Something<unknown>;
-};
-
-
-
-const f1: Foo<Person, string> = {name: new Something('45'), age: new Something(45), foo: new Something(true), id: new Something('44')}
-f1[42] = new Something(true);
-const l = f1[3]
-const f2: Foo<Person, 'name' | 'age'> = {name: new Something('a'), age: new Something(45)}
-const f3: Foo<Person, 'foo'> = {foo: new Something(false)}
-const f4: Foo<Person, keyof Person> = {name: new Something('false')}
