@@ -6,7 +6,7 @@ import {DynamoModel} from './DynamoModel';
 
 export type Item = Record<string, any>;
 
-type WrittenItem<T extends Item, B extends Item> = Omit<T, keyof B> & Partial<B>;
+type Optional<T extends Item, B extends Item> = Omit<T, keyof B> & Partial<B>;
 
 export type KeyAttribute<T> = keyof T & string;
 
@@ -55,7 +55,7 @@ export interface QueryParams<T, P extends keyof T = keyof T, N extends string = 
 }
 
 export interface PutParams<T, B> {
-  item: WrittenItem<T, B>;
+  item: Optional<T, B>;
   conditions?: ConditionSet<T>;
 }
 
@@ -66,7 +66,7 @@ export interface DeleteParams<T, K extends KeyAttributes<T>> {
 
 export interface UpdateParams<T, K extends KeyAttributes<T>, B> {
   key: KeyValue<T, K>;
-  attributes: UpdateAttributes<WrittenItem<T, B>>;
+  attributes: UpdateAttributes<Optional<T, B>>;
   conditions?: ConditionSet<T>;
 }
 
@@ -74,3 +74,38 @@ export interface ConditionCheckParams<T, K extends KeyAttributes<T>> {
   key: KeyValue<T, K>;
   conditions?: ConditionSet<T>;
 }
+
+// Convenience types
+export type ModelItem<Model> = Model extends DynamoModel<infer T> ?
+    T :
+    never;
+
+export type ModelInputItem<Model> = Model extends DynamoModel<infer T, infer K, infer I, infer B> ?
+    Optional<T, B> :
+    never;
+
+export type ModelBaseItem<Model> = Model extends DynamoModel<infer T, infer K, infer I, infer B> ?
+    B :
+    never;
+
+export type ModelKey<Model> = Model extends DynamoModel<infer T, infer K> ?
+    Key<T, K> :
+    never;
+
+export type ModelKeyValue<Model> = Model extends DynamoModel<infer T, infer K> ?
+    KeyValue<T, K> :
+    never;
+
+export type ModelIndexName<Model> = Model extends DynamoModel<infer T, infer K, infer I> ?
+    keyof I :
+    never;
+
+export type ModelIndexKey<Model, N extends ModelIndexName<Model>> =
+    Model extends DynamoModel<infer T, infer K, infer I> ?
+        Key<T, I[N]> :
+        never;
+
+export type ModelIndexKeyValue<Model, N extends ModelIndexName<Model>> =
+    Model extends DynamoModel<infer T, infer K, infer I> ?
+        KeyValue<T, I[N]> :
+        never;
