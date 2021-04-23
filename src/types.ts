@@ -34,6 +34,8 @@ export interface GetParams<T, K extends KeyAttributes<T>, P extends keyof T = ke
   projection?: Array<P>;
 }
 
+export type GetResult<T> = T | undefined;
+
 export interface ScanResult<T, P extends keyof T = keyof T> {
   items: Array<Pick<T, P>>,
   nextPageToken?: string

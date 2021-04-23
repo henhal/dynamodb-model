@@ -1,6 +1,6 @@
 import {
   DeleteParams,
-  GetParams, Item, Key,
+  GetParams, GetResult, Item, Key,
   KeyAttributes,
   KeyIndices,
   ModelParams, PutParams, QueryParams,
@@ -32,12 +32,12 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
 
   async get<P extends keyof T>(
       params: GetParams<T, K, P>
-  ): Promise<T | undefined> {
+  ): Promise<GetResult<T>> {
     const {Item: item} = await this.command(
         new GetCommand(createGetRequest(this, params)),
         (dc, cmd) => dc.send(cmd));
 
-    return item as T | undefined;
+    return item as GetResult<T>;
   }
 
   async scan<P extends keyof T, N extends string, >(
