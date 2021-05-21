@@ -14,21 +14,21 @@ export class DynamoBatchStatementProxy extends DynamoWrapper {
   get<T, K extends KeyAttributes<T>, P extends keyof T>(
       model: DynamoModel<T, K>, ...paramsList: Array<GetParams<T, K, P>>
   ): DynamoBatchGetStatement {
-    return new DynamoBatchGetStatement(this.client).get(model, ...paramsList);
+    return new DynamoBatchGetStatement(this.client, this.name).get(model, ...paramsList);
   }
 
   put<T, K extends KeyAttributes<T>, B>(
       model: DynamoModel<T, K, any, B>,
       ...paramsList: Array<Pick<PutParams<T, B>, 'item'>>
   ): DynamoBatchWriteStatement {
-    return new DynamoBatchWriteStatement(this.client).put(model, ...paramsList);
+    return new DynamoBatchWriteStatement(this.client, this.name).put(model, ...paramsList);
   }
 
   delete<T, K extends KeyAttributes<T>>(
       model: DynamoModel<T, K>,
       ...paramsList: Array<Pick<DeleteParams<T, K>, 'key'>>
   ): DynamoBatchWriteStatement {
-    return new DynamoBatchWriteStatement(this.client).delete(model, ...paramsList);
+    return new DynamoBatchWriteStatement(this.client, this.name).delete(model, ...paramsList);
   }
 }
 

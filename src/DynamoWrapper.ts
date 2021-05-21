@@ -4,7 +4,7 @@ import {DynamoClient} from './DynamoClient';
 type DynamoDbCommand = {input: any};
 
 export abstract class DynamoWrapper {
-  constructor(readonly client: DynamoClient) {
+  constructor(readonly client: DynamoClient, readonly name?: string) {
   }
 
   private get logger() {

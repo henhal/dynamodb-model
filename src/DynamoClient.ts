@@ -17,22 +17,38 @@ export interface Options {
   logger?: Logger;
 }
 
+/**
+ * A DynamoDB client
+ */
 export class DynamoClient {
   constructor(
       readonly dc: DynamoDBDocumentClient = defaultDc(),
       readonly options: Options = {}) {
   }
 
+  /**
+   * Create a model for a DynamoDB table
+   * @param name Name of the model
+   * @param tableName Name of the table
+   */
   model<T extends Item>(name: string, tableName: string = name): DynamoModelBuilder<T> {
     return new DynamoModelBuilder<T>(this, name, tableName);
   }
 
-  transaction(): DynamoTransactionProxy {
-    return new DynamoTransactionProxy(this);
+  /**
+   * Create a transaction
+   * @param [name] Optional name identifying the transaction for logging etc.
+   */
+  transaction(name?: string): DynamoTransactionProxy {
+    return new DynamoTransactionProxy(this, name);
   }
 
-  batch(): DynamoBatchStatementProxy {
-    return new DynamoBatchStatementProxy(this);
+  /**
+   * Create a batch statement
+   * @param [name] Optional name identifying the statement for logging etc.
+   */
+  batch(name?: string): DynamoBatchStatementProxy {
+    return new DynamoBatchStatementProxy(this, name);
   }
 }
 

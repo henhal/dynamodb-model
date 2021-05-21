@@ -23,28 +23,28 @@ export class DynamoTransactionProxy extends DynamoWrapper {
       model: DynamoModel<T, K, any,B>,
       ...paramsList: Array<PutParams<T, B>>
   ): DynamoWriteTransaction {
-    return new DynamoWriteTransaction(this.client).put(model, ...paramsList);
+    return new DynamoWriteTransaction(this.client, this.name).put(model, ...paramsList);
   }
 
   update<T, K extends KeyAttributes<T>, B>(
       model: DynamoModel<T, K, any, B>,
       ...paramsList: Array<UpdateParams<T, K, B>>
   ): DynamoWriteTransaction {
-    return new DynamoWriteTransaction(this.client).update(model, ...paramsList);
+    return new DynamoWriteTransaction(this.client, this.name).update(model, ...paramsList);
   }
 
   delete<T, K extends KeyAttributes<T>>(
       model: DynamoModel<T, K>,
       ...paramsList: Array<DeleteParams<T, K>>
   ): DynamoWriteTransaction {
-    return new DynamoWriteTransaction(this.client).delete(model, ...paramsList);
+    return new DynamoWriteTransaction(this.client, this.name).delete(model, ...paramsList);
   }
 
   get<T, K extends KeyAttributes<T>, P extends keyof T>(
       model: DynamoModel<T, K>,
       ...paramsList: Array<GetParams<T, K, P>>
   ): DynamoGetTransaction {
-    return new DynamoGetTransaction(this.client).get(model, ...paramsList);
+    return new DynamoGetTransaction(this.client, this.name).get(model, ...paramsList);
   }
 }
 
@@ -60,10 +60,17 @@ export abstract class DynamoTransaction extends DynamoWrapper {
         err.CancellationReasons?.some(r => r.Code === 'ConditionalCheckFailed'));
   }
 
+  /**
+   * Check if the most recent commit threw a transaction cancelled error, e.g. due to conditions failing or
+   * concurrency constraints not being fulfilled.
+   */
   isTransactionCancelled(): boolean {
     return DynamoTransaction.isTransactionCancelled(this.err);
   }
 
+  /**
+   * Check if the most recent commit threw an error containing at least one failed condition check
+   */
   conditionalCheckFailed(): boolean {
     return DynamoTransaction.conditionalCheckFailed(this.err);
   }
