@@ -1957,10 +1957,10 @@ domexception@^2.0.1:
   dependencies:
     webidl-conversions "^5.0.0"
 
-dynamodb-expressions@^2.1.3:
-  version "2.1.3"
-  resolved "https://registry.yarnpkg.com/dynamodb-expressions/-/dynamodb-expressions-2.1.3.tgz#1410de2593f1ff70420e6b28d6f27b04e958a529"
-  integrity sha512-ELm3XOODam3eEPyXEf3ZQYmeWAIbRCT4wVnyqQFi1/gP+xbnGhjYibtQKU6FJf8BLzgoRxC0x01IeMdgO66+zg==
+dynamodb-expressions@^2.2.3:
+  version "2.2.3"
+  resolved "https://registry.yarnpkg.com/dynamodb-expressions/-/dynamodb-expressions-2.2.3.tgz#3d2e359e4af5ec347fb80d107ec6707bc353f66e"
+  integrity sha512-MJxWHmOqy25U6UeK9rOg7Hqlg6EsmjNsV0SAVzqLf9Fb8RQjiFzQrKt1OY5UBWYBiVEakMsl+lGVCD7kXXqzdQ==
 
 ecc-jsbn@~0.1.1:
   version "0.1.2"

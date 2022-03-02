@@ -52,7 +52,7 @@ export interface ScanParams<T, P extends keyof T = keyof T, N extends string = s
 // Filter on query may not include key attributes
 export interface QueryParams<T, P extends keyof T = keyof T, N extends string = string, I extends keyof T = keyof T>
     extends ScanParams<T, P, N, Exclude<keyof T, I>> {
-  keyConditions: ConditionSet<T, I>;
+  keyConditions: ConditionSet<Pick<T, I>>;
   ascending?: boolean;
 }
 

@@ -24,7 +24,7 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.11.0",
     "@aws-sdk/lib-dynamodb": "^3.11.0",
-    "dynamodb-expressions": "^2.1.3"
+    "dynamodb-expressions": "^2.2.3"
   },
   "scripts": {
     "build": "tsc",
