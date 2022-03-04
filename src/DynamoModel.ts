@@ -139,7 +139,7 @@ export class DynamoModelBuilder<T extends Item, K extends KeyAttributes<T> = nev
    * @param name Name of the index
    * @param indexAttributes One or two attribute names identifying the HASH and RANGE keys of the index
    */
-  withIndex<N extends string, IK extends KeyAttributes<T>>(name: N, ...indexAttributes: IK): DynamoModelBuilder<T, K, I & Record<N, IK>> {
+  withIndex<N extends string, IK extends KeyAttributes<T>>(name: N, ...indexAttributes: IK): DynamoModelBuilder<T, K, I & Record<N, IK>, B> {
     const builder = this as unknown as DynamoModelBuilder<T, K, I & Record<N, IK>>;
 
     builder.params.indices[name] = indexAttributes as any;
