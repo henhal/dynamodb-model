@@ -21,12 +21,23 @@ export type TriggerCommand = 'put' | 'update' | 'delete';
 export type Trigger<T, K extends KeyAttributes<T>> =
     (key: KeyValue<T, K>, command: TriggerCommand, model: DynamoModel<T, K>) => void;
 
+/**
+ * A function converting an item stored in the database to the proper type of the model.
+ *
+ * Once this function returns, the passed item must be of type T, or if projection is given, of type Pick<T, P>.
+ * @param item The raw item
+ * @param [projection] An array containing which keys of the item are available, and hence which subset of T the item
+ * must fulfill. If not present, the item must be of the full type T.
+ */
+export type ItemConverter<T> = <P extends keyof T>(item: any, projection?: P[]) => void;
+
 export type ModelParams<T, K extends KeyAttributes<T>, I extends KeyIndices<T>, B> = {
   keyAttributes?: K;
   indices: I;
   creators: Array<(item: any) => Partial<B>>;
   updaters: Array<(attributes: any) => Partial<T>>;
   triggers: Array<Trigger<T, K>>;
+  converters?: Array<ItemConverter<T>>;
 };
 
 export interface GetParams<T, K extends KeyAttributes<T>, P extends keyof T = keyof T> {

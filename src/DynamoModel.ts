@@ -1,24 +1,32 @@
-import {
-  DeleteParams,
-  GetParams, GetResult, Item, Key,
-  KeyAttributes,
-  KeyIndices,
-  ModelParams, PutParams, QueryParams,
-  ScanParams,
-  ScanResult, Trigger,
-  UpdateParams,
-} from './types';
 import {DeleteCommand, GetCommand, PutCommand, QueryCommand, ScanCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb';
 import {DynamoClient} from './DynamoClient';
+import {DynamoWrapper} from './DynamoWrapper';
 import {
-  createDeleteRequest, createGetRequest,
+  createDeleteRequest,
+  createGetRequest,
   createPutRequest,
   createQueryRequest,
   createScanRequest,
   createUpdateRequest,
 } from './requests';
+import {
+  ItemConverter,
+  DeleteParams,
+  GetParams,
+  GetResult,
+  Item,
+  Key,
+  KeyAttributes,
+  KeyIndices,
+  ModelParams,
+  PutParams,
+  QueryParams,
+  ScanParams,
+  ScanResult,
+  Trigger,
+  UpdateParams,
+} from './types';
 import {formatPageToken} from './utils';
-import {DynamoWrapper} from './DynamoWrapper';
 
 /**
  * A model representing a DynamoDB table
@@ -33,6 +41,32 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
     super(client);
   }
 
+  private convertItem<P extends keyof T = keyof T>(item: any, projection?: P[]): Pick<T, P> {
+    const {converters} = this.params;
+
+    if (converters) {
+      for (const converter of converters) {
+        converter(item, projection);
+      }
+    }
+
+    return item as Pick<T, P>;
+  }
+
+  private convertItems<P extends keyof T = keyof T>(items: any[], projection?: P[]): Array<Pick<T, P>> {
+    const {converters} = this.params;
+
+    if (converters) {
+      for (const item of items) {
+        for (const converter of converters) {
+          converter(item, projection);
+        }
+      }
+    }
+
+    return items as Array<Pick<T, P>>;
+  }
+
   async get<P extends keyof T>(
       params: GetParams<T, K, P>
   ): Promise<GetResult<T>> {
@@ -40,7 +74,9 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
         new GetCommand(createGetRequest(this, params)),
         (dc, cmd) => dc.send(cmd));
 
-    return item as GetResult<T>;
+    if (item) {
+      return this.convertItem(item, params.projection) as T;
+    }
   }
 
   async scan<P extends keyof T, N extends string, >(
@@ -51,7 +87,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
         (dc, cmd) => dc.send(cmd));
 
     return {
-      items: items as Array<Pick<T, P>>,
+      items: this.convertItems(items, params.projection),
       nextPageToken: formatPageToken(lastKey),
     };
   }
@@ -65,7 +101,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
         (dc, cmd) => dc.send(cmd));
 
     return {
-      items: items as Array<Pick<T, P>>,
+      items: this.convertItems(items, params.projection),
       nextPageToken: formatPageToken(lastKey),
     };
   }
@@ -76,7 +112,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
     await this.command(
         new PutCommand(createPutRequest(this, params)),
         (dc, cmd) => dc.send(cmd));
-    const item = params.item as T;
+    const item = this.convertItem(params.item);
 
     this.params.triggers.forEach(trigger => trigger(item, 'put', this));
 
@@ -89,7 +125,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
     const {Attributes: attributes} = await this.command(
         new UpdateCommand(createUpdateRequest(this, params)),
         (dc, cmd) => dc.send(cmd));
-    const item = attributes as T;
+    const item = this.convertItem(attributes);
 
     this.params.triggers.forEach(trigger => trigger(item, 'update', this));
 
@@ -102,7 +138,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
     const {Attributes: attributes} = await this.command(
         new DeleteCommand(createDeleteRequest(this, params)),
         (dc, cmd) => dc.send(cmd));
-    const item = attributes as T;
+    const item = this.convertItem(attributes);
 
     this.params.triggers.forEach(trigger => trigger(item, 'delete', this));
   }
@@ -170,6 +206,36 @@ export class DynamoModelBuilder<T extends Item, K extends KeyAttributes<T> = nev
     this.params.updaters.push(updater);
 
     return this;
+  }
+
+  /**
+   * Set a converter function to convert items read from the database to the proper type, e.g. to convert legacy items
+   * missing some attributes added later. This will be called for every item returned by a model operation.
+   * Note that the function should modify the passed item.
+   * @param converter
+   */
+  withConverter(converter: ItemConverter<T>) {
+    if (!this.params.converters) {
+      this.params.converters = [converter];
+    } else {
+      this.params.converters.push(converter);
+    }
+
+    return this;
+  }
+
+  /**
+   * Define default values for stored legacy items
+   * @param values An object containing default values to assign to returned model items missing these properties.
+   */
+  withDefaultValues(values: Partial<T>) {
+    return this.withConverter(item => {
+      for (const [k, v] of Object.entries(values)) {
+        if (item[k] === undefined) {
+          item[k] = v;
+        }
+      }
+    });
   }
 
   /**
