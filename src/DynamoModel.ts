@@ -106,6 +106,20 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
     };
   }
 
+  async *iterate<P extends keyof T, N extends string>(
+      params: QueryParams<T, P, N, Key<T, N extends keyof I ? I[N] : K>>
+  ): AsyncGenerator<Pick<T, P>> {
+    const p = {...params};
+    do {
+      const {items, nextPageToken} = await this.query(p);
+
+      for (const item of items) {
+        yield item;
+      }
+      p.pageToken = nextPageToken;
+    } while (p.pageToken);
+  }
+
   async put(
       params: PutParams<T, B>
   ): Promise<{item: T}> {
