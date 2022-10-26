@@ -51,6 +51,29 @@ const {items} = await persons.query({
 });
 ```
 
+There is also built-in `AsyncIterator` support to enable simple iteration of scanned or 
+queried items without bothering with `nextPageToken`, using `for await ... of` syntax.
+
+Iterate through all persons:
+```
+for await (const item of persons.scanIterator()) {
+  console.log(item.name, item.age);
+}
+```
+
+Iterate through all persons named Alice over the age of 25:
+```
+for await (const item of persons.queryIterator({
+  indexName: 'name-age-index',
+  keyConditions: {
+    name: 'Alice',
+    age: Condition.ge(25)
+  }
+})) {
+  console.log(item.name, item.age);
+}
+```
+
 ### Transactions
 
 ```

@@ -92,6 +92,20 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
     };
   }
 
+  async *scanIterator<P extends keyof T, N extends string, >(
+      params: ScanParams<T, P, N> = {}
+  ): AsyncGenerator<Pick<T, P>> {
+    const p = {...params};
+    do {
+      const {items, nextPageToken} = await this.scan(p);
+
+      for (const item of items) {
+        yield item;
+      }
+      p.pageToken = nextPageToken;
+    } while (p.pageToken);
+  }
+
   async query<P extends keyof T, N extends string>(
       params: QueryParams<T, P, N, Key<T, N extends keyof I ? I[N] : K>>
   ): Promise<ScanResult<T, P>> {
@@ -106,7 +120,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
     };
   }
 
-  async *iterate<P extends keyof T, N extends string>(
+  async *queryIterator<P extends keyof T, N extends string>(
       params: QueryParams<T, P, N, Key<T, N extends keyof I ? I[N] : K>>
   ): AsyncGenerator<Pick<T, P>> {
     const p = {...params};
