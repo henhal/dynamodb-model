@@ -10,10 +10,20 @@ function defaultDc() {
 }
 
 type Logger = {
+  /**
+   * Write debug logs. This should be able to log both strings and objects in human-readable format.
+   * @param args
+   */
   debug: (...args: any[]) => void
 };
 
+/**
+ * DynamoClient options
+ */
 export interface Options {
+  /**
+   * A logger used for debugging. This will log the complete input and output of all commands.
+   */
   logger?: Logger;
 }
 

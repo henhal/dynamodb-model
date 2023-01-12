@@ -12,15 +12,16 @@ export abstract class DynamoWrapper {
   }
 
   protected async command<C extends DynamoDbCommand, O>(cmd: C, f: (dc: DynamoDBDocumentClient, cmd: C) => Promise<O>): Promise<O> {
-    const tag = cmd.constructor.name;
+    const command = cmd.constructor.name;
+    const {input} = cmd;
 
     try {
-      this.logger?.debug(`[${tag}] Input:\n${JSON.stringify(cmd.input, null, 2)}`);
+      this.logger?.debug({input}, `DynamoDB ${command} input`);
       const output = await f(this.client.dc, cmd);
-      this.logger?.debug(`[${tag}] Output:\n${JSON.stringify(output, null, 2)}`);
+      this.logger?.debug({output}, `DynamoDB ${command} output`);
       return output;
     } catch (err) {
-      this.logger?.debug(`[${tag}] Error: ${err}`);
+      this.logger?.debug({err}, `DynamoDB ${command} error: ${err.message}`);
       throw err;
     }
   }
