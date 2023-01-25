@@ -1,6 +1,6 @@
 {
   "name": "dynamodb-ts-model",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "A DynamoDB model/client with full TypeScript typings",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
