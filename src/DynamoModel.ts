@@ -109,7 +109,6 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
   async query<P extends keyof T, N extends string>(
       params: QueryParams<T, P, N, Key<T, N extends keyof I ? I[N] : K>>
   ): Promise<ScanResult<T, P>> {
-
     const {Items: items = [], LastEvaluatedKey: lastKey} = await this.command(
         new QueryCommand(createQueryRequest(this, params)),
         (dc, cmd) => dc.send(cmd));

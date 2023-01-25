@@ -1,3 +1,4 @@
+import {ConditionCheck} from '@aws-sdk/client-dynamodb';
 import {
   ConditionCheckParams,
   DeleteParams,
@@ -7,7 +8,13 @@ import {
   ScanParams,
   UpdateParams,
 } from './types';
-import {GetCommandInput} from '@aws-sdk/lib-dynamodb';
+import {
+  DeleteCommandInput,
+  GetCommandInput,
+  PutCommandInput,
+  QueryCommandInput,
+  ScanCommandInput
+} from '@aws-sdk/lib-dynamodb';
 import {buildConditionExpression, buildUpdateExpression} from 'dynamodb-expressions';
 import {DynamoModel} from './DynamoModel';
 import {parsePageToken} from './utils';
@@ -27,7 +34,7 @@ export function createGetRequest<T, K extends KeyAttributes<T>, P extends keyof 
 export function createScanRequest<T, P extends keyof T, N extends string, F extends keyof T>(
     model: DynamoModel<T>,
     params: ScanParams<T, P, N, F>,
-) {
+): ScanCommandInput {
   const attr = {};
   const {indexName, filterConditions, pageToken, limit, projection} = params;
 
@@ -45,7 +52,7 @@ export function createScanRequest<T, P extends keyof T, N extends string, F exte
 export function createQueryRequest<T, P extends keyof T, N extends string, I extends keyof T>(
     model: DynamoModel<T>,
     params: QueryParams<T, P, N, I>
-) {
+): QueryCommandInput {
   const attr = {};
   const {indexName, keyConditions, filterConditions, projection, limit, ascending, pageToken} = params;
 
@@ -65,7 +72,7 @@ export function createQueryRequest<T, P extends keyof T, N extends string, I ext
 export function createPutRequest<T, B>(
     model: DynamoModel<T>,
     params: PutParams<T, B>
-) {
+): PutCommandInput {
   const attr = {};
   const {item, conditions} = params;
 
@@ -100,7 +107,7 @@ export function createUpdateRequest<T, K extends KeyAttributes<T>, B>(
 export function createDeleteRequest<T, K extends KeyAttributes<T>>(
     model: DynamoModel<T, K, any>,
     params: DeleteParams<T, K>
-) {
+): DeleteCommandInput {
   const attr = {};
   const {key, conditions} = params;
 
@@ -116,7 +123,7 @@ export function createDeleteRequest<T, K extends KeyAttributes<T>>(
 export function createConditionCheckRequest<T, K extends KeyAttributes<T>>(
     model: DynamoModel<T, K>,
     params: ConditionCheckParams<T, K>
-) {
+): ConditionCheck {
   const attr = {};
   const {key, conditions} = params;
 
