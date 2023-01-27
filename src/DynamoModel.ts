@@ -29,7 +29,14 @@ import {
 import {formatPageToken, StringKeyOf} from './utils';
 
 /**
- * A model representing a DynamoDB table
+ * A model representing a DynamoDB table.
+ * Type params:
+ * * T represents the data stored in the table.
+ * * K represents the table key definition, which is either a single or a tuple key
+ * * I represents a dictionary of index names to index key definitions
+ * * B represents data being automatically created by one or more creator functions, e.g. automatic timestamp generators.
+ *   This type may contain parts of T, meaning that added items only need to contain attributes of T
+ *   which aren't in type B.
  */
 export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I extends KeyIndices<T> = any, B = any> extends DynamoWrapper {
   constructor(
@@ -67,6 +74,10 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
     return items as Array<Pick<T, P>>;
   }
 
+  /**
+   * Get a single item
+   * @param params
+   */
   async get<P extends keyof T>(
       params: GetParams<T, K, P>
   ): Promise<GetResult<T>> {
@@ -79,6 +90,10 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
     }
   }
 
+  /**
+   * Perform a scan operation, i.e., a query without any key condition, and return a page of items.
+   * @param params
+   */
   async scan<P extends keyof T, N extends string, >(
       params: ScanParams<T, P, N> = {}
   ): Promise<ScanResult<T, P>> {
@@ -92,6 +107,10 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
     };
   }
 
+  /**
+   * Perform a scan operation, i.e., a query without any key condition, and return an item iterator.
+   * @param params
+   */
   async *scanIterator<P extends keyof T, N extends string, >(
       params: ScanParams<T, P, N> = {}
   ): AsyncGenerator<Pick<T, P>> {
@@ -106,6 +125,10 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
     } while (p.pageToken);
   }
 
+  /**
+   * Perform a query operation with a key condition, and return a page of items.
+   * @param params
+   */
   async query<P extends keyof T, N extends StringKeyOf<I>>(
       params: QueryParams<T, P, N, Key<T, N extends keyof I ? I[N] : K>>
   ): Promise<ScanResult<T, P>> {
@@ -119,6 +142,10 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
     };
   }
 
+  /**
+   * Perform a query operation with a key condition, and return an item iterator.
+   * @param params
+   */
   async *queryIterator<P extends keyof T, N extends StringKeyOf<I>>(
       params: QueryParams<T, P, N, Key<T, N extends keyof I ? I[N] : K>>
   ): AsyncGenerator<Pick<T, P>> {
@@ -133,6 +160,13 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
     } while (p.pageToken);
   }
 
+  /**
+   * Put (upsert) an item. If no item with the same key exists, a new item is created; otherwise the existing item is
+   * replaced.
+   * Note that if the model has any creator functions, attributes of T which are also in B do not need to be provided,
+   * such as generated timestamps, auto-generated IDs etc.
+   * @param params
+   */
   async put(
       params: PutParams<T, B>
   ): Promise<{item: T}> {
@@ -159,6 +193,10 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
     return {item};
   }
 
+  /**
+   * Delete an item
+   * @param params
+   */
   async delete(
       params: DeleteParams<T, K>
   ): Promise<void> {

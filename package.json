@@ -33,7 +33,7 @@
     "build": "tsc",
     "clean": "rm -rf dist && rm -f tsconfig.tsbuildinfo",
     "lint": "eslint src --ext js,ts --max-warnings 0",
-    "prepublish": "yarn clean && yarn build && yarn test",
+    "prepack": "yarn clean && yarn build && yarn test",
     "test": "NODE_PATH=src LOG_LEVEL=${LOG_LEVEL:=error} jest --config src/test/jest.config.js"
   },
   "keywords": [
