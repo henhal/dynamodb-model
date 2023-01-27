@@ -10,11 +10,11 @@ import {
   createUpdateRequest,
 } from './requests';
 import {
-  ItemConverter,
   DeleteParams,
   GetParams,
   GetResult,
   Item,
+  ItemConverter,
   Key,
   KeyAttributes,
   KeyIndices,
@@ -26,7 +26,7 @@ import {
   Trigger,
   UpdateParams,
 } from './types';
-import {formatPageToken} from './utils';
+import {formatPageToken, StringKeyOf} from './utils';
 
 /**
  * A model representing a DynamoDB table
@@ -106,7 +106,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
     } while (p.pageToken);
   }
 
-  async query<P extends keyof T, N extends string>(
+  async query<P extends keyof T, N extends StringKeyOf<I>>(
       params: QueryParams<T, P, N, Key<T, N extends keyof I ? I[N] : K>>
   ): Promise<ScanResult<T, P>> {
     const {Items: items = [], LastEvaluatedKey: lastKey} = await this.command(
@@ -119,7 +119,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
     };
   }
 
-  async *queryIterator<P extends keyof T, N extends string>(
+  async *queryIterator<P extends keyof T, N extends StringKeyOf<I>>(
       params: QueryParams<T, P, N, Key<T, N extends keyof I ? I[N] : K>>
   ): AsyncGenerator<Pick<T, P>> {
     const p = {...params};

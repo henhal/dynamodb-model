@@ -1,5 +1,6 @@
 import {ConditionSet, UpdateAttributes} from 'dynamodb-expressions';
 import {DynamoModel} from './DynamoModel';
+import {StringKeyOf} from './utils';
 
 // An item that can be put or updated.
 // Note that B is _allowed_ to be written but could be overwritten by creators/updaters.
@@ -8,14 +9,33 @@ export type Item = Record<string, any>;
 
 type Optional<T extends Item, B extends Item> = Omit<T, keyof B> & Partial<B>;
 
-export type KeyAttribute<T> = keyof T & string;
+/**
+ * The name of an attribute within K
+ */
+export type KeyAttribute<T> = StringKeyOf<T>;
 
-export type KeyAttributes<T> = [KeyAttribute<T>] | [KeyAttribute<T>, KeyAttribute<T>];
+type SingleKey<T> = [KeyAttribute<T>];
+type TupleKey<T> = [KeyAttribute<T>, KeyAttribute<T>];
 
-export type Key<T, K extends KeyAttributes<T>> = K extends [KeyAttribute<T>, KeyAttribute<T>] ? K[1] | K[0] : K[0];
+/**
+ * The attributes defining a key; could either be a single [hash] key or a [hash, range] tuple.
+ */
+export type KeyAttributes<T> = SingleKey<T> | TupleKey<T>;
+
+/**
+ * Key name(s) in a single or tuple key
+ */
+export type Key<T, K extends KeyAttributes<T>> = K[number];
+/**
+ * A key value, such as {foo: 42} for a single key ['foo'] of a {foo: number, bar: string} model,
+ * or {foo: 42, bar: 'hello'} for a tuple key ['foo', 'bar'] of the same model.
+ */
 export type KeyValue<T, K extends KeyAttributes<T>> = Pick<T, Key<T, K>>;
 
-export type KeyIndices<T> = Record<string, KeyAttributes<T>>;
+/**
+ * Index definitions for a model, as a dictionary of names to key definitions
+ */
+export type KeyIndices<T, K extends string = string> = Record<K, KeyAttributes<T>>;
 
 export type TriggerCommand = 'put' | 'update' | 'delete';
 export type Trigger<T, K extends KeyAttributes<T>> =
@@ -89,36 +109,61 @@ export interface ConditionCheckParams<T, K extends KeyAttributes<T>> {
 }
 
 // Convenience types
-export type ModelItem<Model> = Model extends DynamoModel<infer T> ?
+/**
+ * Obtain a type for the items handled by a model
+ */
+export type ModelItem<Model extends DynamoModel<any>> = Model extends DynamoModel<infer T> ?
     T :
     never;
 
+/**
+ * Obtain a type for the input item of a model, i.e., type T but with the attributes of type B being optional as
+ * they are created automatically
+ */
 export type ModelInputItem<Model> = Model extends DynamoModel<infer T, infer K, infer I, infer B> ?
     Optional<T, B> :
     never;
 
+/**
+ * Obtain a type for the base item B of a model, i.e., the attributes that are created automatically
+ */
 export type ModelBaseItem<Model> = Model extends DynamoModel<infer T, infer K, infer I, infer B> ?
     B :
     never;
 
-export type ModelKey<Model> = Model extends DynamoModel<infer T, infer K> ?
+/**
+ * Obtain the name(s) of the key attribute(s) of a model
+ */
+export type ModelKey<Model extends DynamoModel<any>> = Model extends DynamoModel<infer T, infer K> ?
     Key<T, K> :
     never;
 
-export type ModelKeyValue<Model> = Model extends DynamoModel<infer T, infer K> ?
+/**
+ * Obtain a type for key values of a model
+ */
+export type ModelKeyValue<Model extends DynamoModel<any>> = Model extends DynamoModel<infer T, infer K> ?
     KeyValue<T, K> :
     never;
 
-export type ModelIndexName<Model> = Model extends DynamoModel<infer T, infer K, infer I> ?
-    keyof I :
+/**
+ * Obtain a type for index names of a model
+ */
+export type ModelIndexName<Model extends DynamoModel<any>> = Model extends DynamoModel<infer T, infer K, infer I> ?
+    StringKeyOf<I> :
     never;
 
-export type ModelIndexKey<Model, N extends ModelIndexName<Model>> =
+/**
+ * Obtain the name(s) of the key attribute(s) of an index within a model
+ */
+export type ModelIndexKey<Model extends DynamoModel<any>, N extends ModelIndexName<Model>> =
     Model extends DynamoModel<infer T, infer K, infer I> ?
         Key<T, I[N]> :
         never;
 
-export type ModelIndexKeyValue<Model, N extends ModelIndexName<Model>> =
+/**
+ * Obtain a type for key values of an index within a model
+ */
+export type ModelIndexKeyValue<Model extends DynamoModel<any>, N extends ModelIndexName<Model>> =
     Model extends DynamoModel<infer T, infer K, infer I> ?
         KeyValue<T, I[N]> :
         never;

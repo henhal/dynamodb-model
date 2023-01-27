@@ -1,5 +1,7 @@
 import {Item, TriggerCommand} from './types';
 
+export type StringKeyOf<T> = keyof T & string;
+
 export function parsePageToken(pageToken: string | undefined): Item | undefined {
   return pageToken && JSON.parse(Buffer.from(pageToken, 'base64').toString());
 }
