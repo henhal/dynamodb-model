@@ -1,6 +1,14 @@
 # dynamodb-ts-model
 A DynamoDB model implementation with full TypeScript type support.
 
+***
+### BREAKING CHANGE in v2:
+
+v2 of this module does not contain any breaking changes, however it does include v3 of [dynamodb-expressions](https://www.npmjs.com/package/dynamodb-expressions)
+as a dependency, which is not fully backwards compatible since it changes the signature of two functions. 
+
+***
+
 This module allows you to create fully type-safe DynamoDB models describing your data,
 including keys, indices etc. It also supports
 
