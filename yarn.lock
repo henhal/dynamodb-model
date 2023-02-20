@@ -2054,10 +2054,10 @@ domexception@^2.0.1:
   dependencies:
     webidl-conversions "^5.0.0"
 
-dynamodb-expressions@^3.0.4:
-  version "3.0.4"
-  resolved "https://registry.yarnpkg.com/dynamodb-expressions/-/dynamodb-expressions-3.0.4.tgz#3489c00252e1e5d9e9cd8ad44ba0c584d2edfd10"
-  integrity sha512-pVw9HAoTQu7hShy4+vyrm+gwQb9oBNMQqQWDDIUVCNCqFz9Cjqr1FRhB+h/6JsF7c2T64XHurAkFFLU/OaVYFw==
+dynamodb-expressions@^3.1.0:
+  version "3.1.0"
+  resolved "https://registry.yarnpkg.com/dynamodb-expressions/-/dynamodb-expressions-3.1.0.tgz#44db9d8f9de9a8c47b870f868072bcd4701b1ba9"
+  integrity sha512-6VzPd9ddHwNLepXAfQNkRIMXVQYUibGX5fO+GcJK+vWQX3yHRULkgsnlfPMeZQb/AE8Tx6QJJFOgHiWwgge/Qg==
 
 ecc-jsbn@~0.1.1:
   version "0.1.2"
