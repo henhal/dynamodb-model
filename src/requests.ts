@@ -2,7 +2,7 @@ import {ConditionCheck} from '@aws-sdk/client-dynamodb';
 import {
   ConditionCheckParams,
   DeleteParams,
-  GetParams,
+  GetParams, Item,
   KeyAttributes, PutParams,
   QueryParams,
   ScanParams,
@@ -19,7 +19,7 @@ import {buildConditionExpression, buildUpdateExpression} from 'dynamodb-expressi
 import {DynamoModel} from './DynamoModel';
 import {parsePageToken} from './utils';
 
-export function createGetRequest<T, K extends KeyAttributes<T>, P extends keyof T>(
+export function createGetRequest<T extends Item, K extends KeyAttributes<T>, P extends keyof T>(
     model: DynamoModel<T>,
     params: GetParams<T, K, P>
 ): GetCommandInput {
@@ -31,7 +31,7 @@ export function createGetRequest<T, K extends KeyAttributes<T>, P extends keyof 
   };
 }
 
-export function createScanRequest<T, P extends keyof T, N extends string, F extends keyof T>(
+export function createScanRequest<T extends Item, P extends keyof T, N extends string, F extends keyof T>(
     model: DynamoModel<T>,
     params: ScanParams<T, P, N, F>,
 ): ScanCommandInput {
@@ -49,7 +49,7 @@ export function createScanRequest<T, P extends keyof T, N extends string, F exte
   };
 }
 
-export function createQueryRequest<T, P extends keyof T, N extends string, I extends keyof T>(
+export function createQueryRequest<T extends Item, P extends keyof T, N extends string, I extends keyof T>(
     model: DynamoModel<T>,
     params: QueryParams<T, P, N, I>
 ): QueryCommandInput {
@@ -69,7 +69,7 @@ export function createQueryRequest<T, P extends keyof T, N extends string, I ext
   };
 }
 
-export function createPutRequest<T, B>(
+export function createPutRequest<T extends Item, B extends Item>(
     model: DynamoModel<T>,
     params: PutParams<T, B>
 ): PutCommandInput {
@@ -86,7 +86,7 @@ export function createPutRequest<T, B>(
   };
 }
 
-export function createUpdateRequest<T, K extends KeyAttributes<T>, B>(
+export function createUpdateRequest<T extends Item, K extends KeyAttributes<T>, B extends Item>(
     model: DynamoModel<T, K>,
     params: UpdateParams<T, K, B>
 ) {
@@ -104,7 +104,7 @@ export function createUpdateRequest<T, K extends KeyAttributes<T>, B>(
   };
 }
 
-export function createDeleteRequest<T, K extends KeyAttributes<T>>(
+export function createDeleteRequest<T extends Item, K extends KeyAttributes<T>>(
     model: DynamoModel<T, K, any>,
     params: DeleteParams<T, K>
 ): DeleteCommandInput {
@@ -120,7 +120,7 @@ export function createDeleteRequest<T, K extends KeyAttributes<T>>(
   };
 }
 
-export function createConditionCheckRequest<T, K extends KeyAttributes<T>>(
+export function createConditionCheckRequest<T extends Item, K extends KeyAttributes<T>>(
     model: DynamoModel<T, K>,
     params: ConditionCheckParams<T, K>
 ): ConditionCheck {

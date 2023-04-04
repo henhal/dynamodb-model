@@ -47,3 +47,7 @@ export function parseRequest(request: any): {command: TriggerCommand; key: Recor
 export function getKeyValues(item: any, keyAttributes: string[]) {
   return keyAttributes.map(attr => item[attr]);
 }
+
+export function error(message: string): never {
+  throw new Error(message);
+}

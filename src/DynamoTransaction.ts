@@ -6,7 +6,7 @@ import {
   TransactWriteCommandInput,
 } from '@aws-sdk/lib-dynamodb';
 
-import {ConditionCheckParams, DeleteParams, GetParams, KeyAttributes, PutParams, UpdateParams} from './types';
+import {ConditionCheckParams, DeleteParams, GetParams, Item, KeyAttributes, PutParams, UpdateParams} from './types';
 import {
   createConditionCheckRequest,
   createDeleteRequest,
@@ -19,28 +19,28 @@ import {DynamoWrapper} from './DynamoWrapper';
 import {parseRequest} from './utils';
 
 export class DynamoTransactionProxy extends DynamoWrapper {
-  put<T, K extends KeyAttributes<T>, B>(
-      model: DynamoModel<T, K, any,B>,
+  put<T extends Item, K extends KeyAttributes<T>, B extends Item>(
+      model: DynamoModel<T, K, any, B>,
       ...paramsList: Array<PutParams<T, B>>
   ): DynamoWriteTransaction {
     return new DynamoWriteTransaction(this.client, this.name).put(model, ...paramsList);
   }
 
-  update<T, K extends KeyAttributes<T>, B>(
+  update<T extends Item, K extends KeyAttributes<T>, B extends Item>(
       model: DynamoModel<T, K, any, B>,
       ...paramsList: Array<UpdateParams<T, K, B>>
   ): DynamoWriteTransaction {
     return new DynamoWriteTransaction(this.client, this.name).update(model, ...paramsList);
   }
 
-  delete<T, K extends KeyAttributes<T>>(
+  delete<T extends Item, K extends KeyAttributes<T>>(
       model: DynamoModel<T, K>,
       ...paramsList: Array<DeleteParams<T, K>>
   ): DynamoWriteTransaction {
     return new DynamoWriteTransaction(this.client, this.name).delete(model, ...paramsList);
   }
 
-  get<T, K extends KeyAttributes<T>, P extends keyof T>(
+  get<T extends Item, K extends KeyAttributes<T>, P extends keyof T>(
       model: DynamoModel<T, K>,
       ...paramsList: Array<GetParams<T, K, P>>
   ): DynamoGetTransaction {
@@ -79,7 +79,7 @@ export abstract class DynamoTransaction extends DynamoWrapper {
 export class DynamoGetTransaction extends DynamoTransaction {
   private readonly items: NonNullable<TransactGetCommandInput['TransactItems']> = [];
 
-  get<T, K extends KeyAttributes<T>, P extends keyof T>(
+  get<T extends Item, K extends KeyAttributes<T>, P extends keyof T>(
       model: DynamoModel<T, K>,
       ...paramsList: Array<GetParams<T, K, P>>
   ): DynamoGetTransaction {
@@ -104,8 +104,8 @@ export class DynamoWriteTransaction extends DynamoTransaction {
   private readonly items: NonNullable<TransactWriteCommandInput['TransactItems']> = [];
   private readonly modelMap = new Map<string, DynamoModel<any>>();
 
-  put<T, K extends KeyAttributes<T>, B>(
-      model: DynamoModel<T, K, any,B>,
+  put<T extends Item, K extends KeyAttributes<T>, B extends Item>(
+      model: DynamoModel<T, K, any, B>,
       ...paramsList: Array<PutParams<T, B>>
   ): DynamoWriteTransaction {
     this.items.push(...paramsList.map(params => ({Put: createPutRequest(model, params)})));
@@ -114,7 +114,7 @@ export class DynamoWriteTransaction extends DynamoTransaction {
     return this;
   }
 
-  update<T, K extends KeyAttributes<T>, B>(
+  update<T extends Item, K extends KeyAttributes<T>, B extends Item>(
       model: DynamoModel<T, K, any, B>,
       ...paramsList: Array<UpdateParams<T, K, B>>
   ): DynamoWriteTransaction {
@@ -124,7 +124,7 @@ export class DynamoWriteTransaction extends DynamoTransaction {
     return this;
   }
 
-  delete<T, K extends KeyAttributes<T>>(
+  delete<T extends Item, K extends KeyAttributes<T>>(
       model: DynamoModel<T, K>,
       ...paramsList: Array<DeleteParams<T, K>>
   ): DynamoWriteTransaction {
@@ -134,7 +134,7 @@ export class DynamoWriteTransaction extends DynamoTransaction {
     return this;
   }
 
-  condition<T, K extends KeyAttributes<T>>(
+  condition<T extends Item, K extends KeyAttributes<T>>(
       model: DynamoModel<T, K>,
       ...paramsList: Array<ConditionCheckParams<T, K>>
   ): DynamoWriteTransaction {

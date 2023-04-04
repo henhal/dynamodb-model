@@ -20,7 +20,7 @@ export abstract class DynamoWrapper {
       const output = await f(this.client.dc, cmd);
       this.logger?.debug({output}, `DynamoDB ${command} output`);
       return output;
-    } catch (err) {
+    } catch (err: any) {
       this.logger?.debug({err}, `DynamoDB ${command} error: ${err.message}`);
       throw err;
     }

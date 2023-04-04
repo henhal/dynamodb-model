@@ -38,7 +38,7 @@ export type KeyValue<T, K extends KeyAttributes<T>> = Pick<T, Key<T, K>>;
 export type KeyIndices<T, K extends string = string> = Record<K, KeyAttributes<T>>;
 
 export type TriggerCommand = 'put' | 'update' | 'delete';
-export type Trigger<T, K extends KeyAttributes<T>> =
+export type Trigger<T extends Item, K extends KeyAttributes<T>> =
     (key: KeyValue<T, K>, command: TriggerCommand, model: DynamoModel<T, K>) => void;
 
 /**
@@ -51,7 +51,7 @@ export type Trigger<T, K extends KeyAttributes<T>> =
  */
 export type ItemConverter<T> = <P extends keyof T>(item: any, projection?: P[]) => void;
 
-export type ModelParams<T, K extends KeyAttributes<T>, I extends KeyIndices<T>, B> = {
+export type ModelParams<T extends Item, K extends KeyAttributes<T>, I extends KeyIndices<T>, B> = {
   keyAttributes?: K;
   indices: I;
   creators: Array<(item: any) => Partial<B>>;
@@ -60,19 +60,19 @@ export type ModelParams<T, K extends KeyAttributes<T>, I extends KeyIndices<T>, 
   converters?: Array<ItemConverter<T>>;
 };
 
-export interface GetParams<T, K extends KeyAttributes<T>, P extends keyof T = keyof T> {
+export interface GetParams<T extends Item, K extends KeyAttributes<T>, P extends keyof T = keyof T> {
   key: KeyValue<T, K>;
   projection?: Array<P>;
 }
 
-export type GetResult<T> = T | undefined;
+export type GetResult<T extends Item> = T | undefined;
 
-export interface ScanResult<T, P extends keyof T = keyof T> {
+export interface ScanResult<T extends Item, P extends keyof T = keyof T> {
   items: Array<Pick<T, P>>,
   nextPageToken?: string
 }
 
-export interface ScanParams<T, P extends keyof T = keyof T, N extends string = string, F extends keyof T = keyof T> {
+export interface ScanParams<T extends Item, P extends keyof T = keyof T, N extends string = string, F extends keyof T = keyof T> {
   indexName?: N;
   pageToken?: string;
   limit?: number;
@@ -81,23 +81,23 @@ export interface ScanParams<T, P extends keyof T = keyof T, N extends string = s
 }
 
 // Filter on query may not include key attributes
-export interface QueryParams<T, P extends keyof T = keyof T, N extends string = string, I extends keyof T = keyof T>
+export interface QueryParams<T extends Item, P extends keyof T = keyof T, N extends string = string, I extends keyof T = keyof T>
     extends ScanParams<T, P, N, Exclude<keyof T, I>> {
   keyConditions: ConditionSet<Pick<T, I>>;
   ascending?: boolean;
 }
 
-export interface PutParams<T, B> {
+export interface PutParams<T extends Item, B extends Item> {
   item: Optional<T, B>;
   conditions?: ConditionSet<T>;
 }
 
-export interface DeleteParams<T, K extends KeyAttributes<T>> {
+export interface DeleteParams<T extends Item, K extends KeyAttributes<T>> {
   key: KeyValue<T, K>;
   conditions?: ConditionSet<T>;
 }
 
-export interface UpdateParams<T, K extends KeyAttributes<T>, B> {
+export interface UpdateParams<T extends Item, K extends KeyAttributes<T>, B extends Item> {
   key: KeyValue<T, K>;
   attributes: UpdateAttributes<Optional<T, B>>;
   conditions?: ConditionSet<T>;
