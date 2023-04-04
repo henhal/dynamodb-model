@@ -329,7 +329,7 @@ export class DynamoModelBuilder<T extends Item, K extends KeyAttributes<T> = nev
     const {
       client = this.client || error('client not supplied'),
       name = this.name || error('name not supplied'),
-      tableName = this.tableName || error('tableName not supplied ')
+      tableName = this.tableName || name
     } = options;
 
     return new DynamoModel(client, name, tableName, this.params);
@@ -362,7 +362,7 @@ export class DynamoModelBuilder<T extends Item, K extends KeyAttributes<T> = nev
         const {
           client = builder.client || error('client not supplied'),
           name = builder.name || error('name not supplied'),
-          tableName = builder.tableName || error('tableName not supplied')
+          tableName = builder.tableName || name
         } = options;
         super(client, name, tableName, builder.params);
       }
