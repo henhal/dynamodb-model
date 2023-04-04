@@ -44,9 +44,29 @@ const persons = client.model<Person>('persons')
   .withIndex('name-age-index', 'name', 'age')
   .withCreator(x => ({id: uuid.v4(), createdTime: now(), modifiedTime: now()}))
   .withUpdater(x => ({modifiedTime: now()}))
-  .withTrigger((item, command, model) => console.log(`Trigger: ${model.name}.${command}: ${JSON.stringify(item)}))
+  .withTrigger((item, command, model) => console.log(`Trigger: ${model.name}.${command}: ${JSON.stringify(item)}`))
   .build();
 ```
+
+You can also dynamically define a model class and defer runtime parameters to the constructor of this class,
+which is also very convenient since it creates an easy type to refer to:
+
+```
+class PersonModel extends DynamoModel.builder<Person>()
+    .withKey('id')
+    .withIndex('name-age-index', 'name', 'age')
+    .withCreator(x => ({id: uuid.v4(), createdTime: now(), modifiedTime: now()}))
+    .withUpdater(x => ({modifiedTime: now()}))
+    .withTrigger((item, command, model) => console.log(`Trigger: ${model.name}.${command}: ${JSON.stringify(item)}`))
+  .class() {}
+
+const persons = new PersonModel(client, 'persons');
+
+async function doSomething(model: PersonModel) {
+  const person = await model.get({key: {id: '42'}});
+}
+```
+
 
 ### Querying for items
 

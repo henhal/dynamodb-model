@@ -39,6 +39,10 @@ import {formatPageToken, StringKeyOf} from './utils';
  *   which aren't in type B.
  */
 export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I extends KeyIndices<T> = any, B = any> extends DynamoWrapper {
+  static builder<T extends Item>(): DynamoModelBuilder<T> {
+    return new DynamoModelBuilder<T>();
+  }
+
   constructor(
       client: DynamoClient,
       readonly name: string,
@@ -212,7 +216,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
 /**
  * A model builder
  */
-export class DynamoModelBuilder<T extends Item, K extends KeyAttributes<T> = never, I extends KeyIndices<T> = {}, B = {}> extends DynamoWrapper {
+export class DynamoModelBuilder<T extends Item, K extends KeyAttributes<T> = never, I extends KeyIndices<T> = {}, B = {}>  {
   private readonly params: ModelParams<T, K, I, B> = {
     indices: {} as I,
     creators: [],
@@ -220,8 +224,7 @@ export class DynamoModelBuilder<T extends Item, K extends KeyAttributes<T> = nev
     triggers: []
   };
 
-  constructor(client: DynamoClient, readonly name: string, readonly tableName: string) {
-    super(client);
+  constructor(readonly client?: DynamoClient, readonly name?: string, readonly tableName?: string) {
   }
 
   /**
@@ -314,9 +317,36 @@ export class DynamoModelBuilder<T extends Item, K extends KeyAttributes<T> = nev
   }
 
   /**
-   * Build the model
+   * Build an instance of the model
+   * The arguments client, name and tableName may either be supplied to this method
+   * or earlier when the builder is created
    */
-  build(): DynamoModel<T, K, I, B> {
-    return new DynamoModel(this.client, this.name, this.tableName, this.params);
+  build(client = this.client, name = this.name, tableName = this.tableName): DynamoModel<T, K, I, B> {
+    const {params} = this;
+
+    if (!client || !name || !tableName) {
+      throw new Error('Cannot build model without arguments. Either supply them when calling build() or when creating the DynamoBuilder instance.');
+    }
+    return new DynamoModel(client, name, tableName, params);
+  }
+
+  /**
+   * Create a class for the model. This is convenient as it also creates a type that can be easily referred to instead
+   * of complex generic types such as DynamoModel<MyItem, 'id', {modifiedTime: string}> etc.
+   *
+   * Usage:
+   * class MyModel extends DynamoModel.builder<MyItem>().withKey('id').class() {}
+   *
+   * const model = new MyModel(client, 'foo');
+   */
+  class(): abstract new (client: DynamoClient, name: string, tableName?: string) => DynamoModel<T, K, I, B> {
+    const {params} = this;
+
+    return class extends DynamoModel<T, K, I, B> {
+      constructor(client: DynamoClient, name: string, tableName = name) {
+        super(client, name, tableName, params);
+      }
+    }
   }
 }
+
