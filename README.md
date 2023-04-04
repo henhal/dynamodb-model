@@ -63,7 +63,9 @@ class PersonModel extends DynamoModel.builder<Person>()
 const persons = new PersonModel(client, 'persons');
 
 async function doSomething(model: PersonModel) {
-  const person = await model.get({key: {id: '42'}});
+  const person = await model.get({
+    key: {id: '42'}
+  });
 }
 ```
 

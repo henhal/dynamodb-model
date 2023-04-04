@@ -26,7 +26,13 @@ import {
   Trigger,
   UpdateParams,
 } from './types';
-import {formatPageToken, StringKeyOf} from './utils';
+import {error, formatPageToken, StringKeyOf} from './utils';
+
+export class ModelOptions {
+  client?: DynamoClient;
+  name?: string;
+  tableName?: string;
+}
 
 /**
  * A model representing a DynamoDB table.
@@ -38,11 +44,7 @@ import {formatPageToken, StringKeyOf} from './utils';
  *   This type may contain parts of T, meaning that added items only need to contain attributes of T
  *   which aren't in type B.
  */
-export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I extends KeyIndices<T> = any, B = any> extends DynamoWrapper {
-  static builder<T extends Item>(): DynamoModelBuilder<T> {
-    return new DynamoModelBuilder<T>();
-  }
-
+export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I extends KeyIndices<T> = any, B extends Item = any> extends DynamoWrapper {
   constructor(
       client: DynamoClient,
       readonly name: string,
@@ -216,7 +218,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
 /**
  * A model builder
  */
-export class DynamoModelBuilder<T extends Item, K extends KeyAttributes<T> = never, I extends KeyIndices<T> = {}, B = {}>  {
+export class DynamoModelBuilder<T extends Item, K extends KeyAttributes<T> = never, I extends KeyIndices<T> = {}, B extends Item = {}>  {
   private readonly params: ModelParams<T, K, I, B> = {
     indices: {} as I,
     creators: [],
@@ -260,7 +262,7 @@ export class DynamoModelBuilder<T extends Item, K extends KeyAttributes<T> = nev
   withCreator<_B>(creator: (item: T) => _B) {
     const builder = this as unknown as DynamoModelBuilder<T & _B, K, I, B & _B>;
 
-    builder.params.creators.push(creator);
+    builder.params.creators.push(creator as any);
 
     return builder;
   }
@@ -318,33 +320,51 @@ export class DynamoModelBuilder<T extends Item, K extends KeyAttributes<T> = nev
 
   /**
    * Build an instance of the model
-   * The arguments client, name and tableName may either be supplied to this method
-   * or earlier when the builder is created
+   * If the builder was created via the static method `DynamoClient.model()`, the options `client`, `name` and `tableName`
+   * must be supplied now.
+   * If the builder was created via the instance method `client.model(name, tableName)`, the arguments may be omitted,
+   * but if present they will override any options supplied when the builder was created.
    */
-  build(client = this.client, name = this.name, tableName = this.tableName): DynamoModel<T, K, I, B> {
-    const {params} = this;
+  build(options: ModelOptions = {}): DynamoModel<T, K, I, B> {
+    const {
+      client = this.client || error('client not supplied'),
+      name = this.name || error('name not supplied'),
+      tableName = this.tableName || error('tableName not supplied ')
+    } = options;
 
-    if (!client || !name || !tableName) {
-      throw new Error('Cannot build model without arguments. Either supply them when calling build() or when creating the DynamoBuilder instance.');
-    }
-    return new DynamoModel(client, name, tableName, params);
+    return new DynamoModel(client, name, tableName, this.params);
   }
 
   /**
    * Create a class for the model. This is convenient as it also creates a type that can be easily referred to instead
    * of complex generic types such as DynamoModel<MyItem, 'id', {modifiedTime: string}> etc.
    *
-   * Usage:
-   * class MyModel extends DynamoModel.builder<MyItem>().withKey('id').class() {}
+   * If the builder was created via the static method `DynamoClient.model()`, the options `client`, `name` and `tableName`
+   * must be supplied either as arguments to this method or as arguments to the returned constructor function on each instance
+   * creation.
+   * If the builder was created via the instance method `client.model(name, tableName)`, the arguments may be omitted both
+   * from this method and the returned constructor function, but if present they will override any options supplied to
+   * this method or when the builder was created.
    *
-   * const model = new MyModel(client, 'foo');
+   * Usage:
+   * class PersonModel extends DynamoClient.model<Person>()
+   *   .withKey('id')
+   *   .withIndex('name-age-index', 'name', 'age')
+   *   .class() {}
+   *
+   * const persons = new PersonModel({client, name: 'foo'});
    */
-  class(): abstract new (client: DynamoClient, name: string, tableName?: string) => DynamoModel<T, K, I, B> {
-    const {params} = this;
+  class(options: ModelOptions = {}): abstract new (options?: ModelOptions) => DynamoModel<T, K, I, B> {
+    const builder = {...options, ...this};
 
     return class extends DynamoModel<T, K, I, B> {
-      constructor(client: DynamoClient, name: string, tableName = name) {
-        super(client, name, tableName, params);
+      constructor(options: ModelOptions = {}) {
+        const {
+          client = builder.client || error('client not supplied'),
+          name = builder.name || error('name not supplied'),
+          tableName = builder.tableName || error('tableName not supplied')
+        } = options;
+        super(client, name, tableName, builder.params);
       }
     }
   }

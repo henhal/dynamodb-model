@@ -31,6 +31,15 @@ export interface Options {
  * A DynamoDB client
  */
 export class DynamoClient {
+
+  /**
+   * Create a model for a DynamoDB table without supplying the runtime parameters.
+   * @returns a builder used to build a model.
+   */
+  static model<T extends Item>(): DynamoModelBuilder<T> {
+    return new DynamoModelBuilder<T>();
+  }
+
   constructor(
       readonly dc: DynamoDBDocumentClient = defaultDc(),
       readonly options: Options = {}) {
@@ -40,6 +49,7 @@ export class DynamoClient {
    * Create a model for a DynamoDB table
    * @param name Name of the model
    * @param tableName Name of the table
+   * @returns a builder used to build a model.
    */
   model<T extends Item>(name: string, tableName: string = name): DynamoModelBuilder<T> {
     return new DynamoModelBuilder<T>(this, name, tableName);

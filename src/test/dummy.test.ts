@@ -4,7 +4,7 @@ describe('TODO', () => {
   });
 });
 
-import DynamoClient, {DynamoModel} from '../';
+import DynamoClient from '../';
 
 type Person = {
   id: string;
@@ -18,7 +18,7 @@ const client = new DynamoClient();
 const now = () => new Date().toJSON();
 const uuid = {v4: () => '42'};
 
-class PersonModel extends DynamoModel.builder<Person>()
+class PersonModel extends DynamoClient.model<Person>()
     .withKey('id')
     .withIndex('name-age-index', 'name', 'age')
     .withCreator(x => ({id: uuid.v4(), createdTime: now(), modifiedTime: now()}))
@@ -26,8 +26,10 @@ class PersonModel extends DynamoModel.builder<Person>()
     .withTrigger((item, command, model) => console.log(`Trigger: ${model.name}.${command}: ${JSON.stringify(item)}`))
   .class() {}
 
-const persons = new PersonModel(client, 'persons');
+const persons = new PersonModel({client, name: 'persons'});
 
 async function doSomething(model: PersonModel) {
-  const person = await model.get({key: {id: '42'}});
+  const person = await model.get({
+    key: {id: '42'}
+  });
 }
