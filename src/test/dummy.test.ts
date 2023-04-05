@@ -12,7 +12,7 @@ type Person = {
 const now = () => new Date().toJSON();
 
 describe('Models', () => {
-  it('should create model class', () => {
+  it('should create model class', async () => {
     const client = new DynamoClient();
 
     class PersonModel extends DynamoClient.model<Person>()
@@ -28,5 +28,12 @@ describe('Models', () => {
         .class() {}
 
     const persons = new PersonModel({client, name: 'persons'});
+    // await persons.atomicAction({key: {id: '42'}, conditionAttribute: 'modifiedTime'}, async ({key, conditions}) => {
+    //   return persons.update({
+    //     key,
+    //     attributes: {age: 42},
+    //     conditions
+    //   })
+    // });
   });
 });

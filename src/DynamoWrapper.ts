@@ -7,7 +7,7 @@ export abstract class DynamoWrapper {
   constructor(readonly client: DynamoClient, readonly name?: string) {
   }
 
-  private get logger() {
+  protected get logger() {
     return this.client.options.logger;
   }
 

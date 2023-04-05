@@ -1,4 +1,6 @@
+import {ConditionalCheckFailedException} from '@aws-sdk/client-dynamodb';
 import {DeleteCommand, GetCommand, PutCommand, QueryCommand, ScanCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb';
+import {Condition, ConditionAttributes} from 'dynamodb-expressions';
 import {DynamoClient} from './DynamoClient';
 import {DynamoWrapper} from './DynamoWrapper';
 import {
@@ -15,9 +17,11 @@ import {
   GetResult,
   Item,
   ItemConverter,
+  ItemResult,
   Key,
   KeyAttributes,
   KeyIndices,
+  KeyValue,
   ModelParams,
   PutParams,
   QueryParams,
@@ -34,6 +38,18 @@ export class ModelOptions {
   tableName?: string;
 }
 
+export interface AtomicActionParams<T extends Item, K extends KeyAttributes<T>, C extends keyof T> {
+  key: KeyValue<T, K>;
+  conditionAttribute: C,
+  maxAttempts?: number;
+}
+
+export interface AtomicActionFuncParams<T extends Item, K extends KeyAttributes<T>> {
+  key: KeyValue<T, K>,
+  item?: T,
+  conditions: ConditionAttributes<T>;
+}
+
 /**
  * A model representing a DynamoDB table.
  * Type params:
@@ -45,6 +61,14 @@ export class ModelOptions {
  *   which aren't in type B.
  */
 export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I extends KeyIndices<T> = any, B extends Item = any> extends DynamoWrapper {
+  /**
+   * Check if an error returned by a DynamoModel is a conditional check failed error
+   * @param err
+   */
+  static isConditionalCheckFailed(err: any): err is ConditionalCheckFailedException {
+    return err?.name === 'ConditionalCheckFailedException';
+  }
+
   constructor(
       client: DynamoClient,
       readonly name: string,
@@ -175,7 +199,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
    */
   async put(
       params: PutParams<T, B>
-  ): Promise<{item: T}> {
+  ): Promise<ItemResult<T>> {
     await this.command(
         new PutCommand(createPutRequest(this, params)),
         (dc, cmd) => dc.send(cmd));
@@ -188,7 +212,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
 
   async update(
       params: UpdateParams<T, K, B>
-  ): Promise<{item: T}> {
+  ): Promise<ItemResult<T>> {
     const {Attributes: attributes} = await this.command(
         new UpdateCommand(createUpdateRequest(this, params)),
         (dc, cmd) => dc.send(cmd));
@@ -212,6 +236,55 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
     const item = this.convertItem(attributes);
 
     this.params.triggers.forEach(trigger => trigger(item, 'delete', this));
+  }
+
+  /**
+   * Perform an atomic read-modify-write action which fetches an item and calls the supplied function with a key,
+   * the existing item if it exists, and a set of conditions used to verify that the item hasn't been changed
+   * concurrently between the get and the performed action.
+   * The function should update the model using those arguments, using e.g. put() or update().
+   *
+   * If the action fails due to a conditional check failed error, after a delay the item will be fetched again and
+   * the function called again, up to a certain number of attempts.
+   *
+   * This enables putting or updating an item without overwriting data in case of concurrent modifications.
+   * It relies on the conditionAttribute having a unique value after each update, such as a random version assigned
+   * on each modification or a timestamp of sufficient accuracy being refreshed on each modification.
+   * @param params
+   * @param params.key Key of the item to perform the action on
+   * @param params.conditionAttribute Name of attribute to condition the action on
+   * @param [params.maxAttempts] Max number of attempts
+   * @param action Function called to perform the action on the item
+   */
+  async atomicAction<C extends keyof T, R>(
+      params: AtomicActionParams<T, K, C>,
+      action: (params: AtomicActionFuncParams<T, K>) => Promise<R>
+  ): Promise<R> {
+    const {key, conditionAttribute, maxAttempts = 5} = params;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const item = await this.get({key});
+
+      try {
+        return await action({
+          key,
+          item,
+          conditions: {
+            [conditionAttribute]: item?.[conditionAttribute] ?? Condition.attributeNotExists()
+          } as ConditionAttributes<T>
+        });
+      } catch (err) {
+        this.logger?.debug({attempt, err}, 'Atomic action attempt failed');
+
+        if (!DynamoModel.isConditionalCheckFailed(err)) {
+          throw err;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 100));
+      }
+    }
+
+    throw new Error('Atomic action failed after max attempts');
   }
 }
 

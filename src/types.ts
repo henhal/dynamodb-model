@@ -67,6 +67,10 @@ export interface GetParams<T extends Item, K extends KeyAttributes<T>, P extends
 
 export type GetResult<T extends Item> = T | undefined;
 
+export type ItemResult<T extends Item> = {
+  item: T;
+}
+
 export interface ScanResult<T extends Item, P extends keyof T = keyof T> {
   items: Array<Pick<T, P>>,
   nextPageToken?: string
