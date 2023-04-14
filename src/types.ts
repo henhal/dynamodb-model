@@ -76,7 +76,7 @@ export interface ScanResult<T extends Item, P extends keyof T = keyof T> {
   nextPageToken?: string
 }
 
-export interface ScanParams<T extends Item, P extends keyof T = keyof T, N extends string = string, F extends keyof T = keyof T> {
+export interface ScanParams<T extends Item, P extends keyof T = keyof T, N extends string | undefined = string | undefined, F extends keyof T = keyof T> {
   indexName?: N;
   pageToken?: string;
   limit?: number;
@@ -85,7 +85,7 @@ export interface ScanParams<T extends Item, P extends keyof T = keyof T, N exten
 }
 
 // Filter on query may not include key attributes
-export interface QueryParams<T extends Item, P extends keyof T = keyof T, N extends string = string, I extends keyof T = keyof T>
+export interface QueryParams<T extends Item, P extends keyof T = keyof T, N extends string | undefined = string | undefined, I extends keyof T = keyof T>
     extends ScanParams<T, P, N, Exclude<keyof T, I>> {
   keyConditions: ConditionSet<Pick<T, I>>;
   ascending?: boolean;

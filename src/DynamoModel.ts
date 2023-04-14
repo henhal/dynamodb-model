@@ -159,7 +159,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
    * Perform a query operation with a key condition, and return a page of items.
    * @param params
    */
-  async query<P extends keyof T, N extends StringKeyOf<I>>(
+  async query<P extends keyof T, N extends StringKeyOf<I> | undefined>(
       params: QueryParams<T, P, N, Key<T, N extends keyof I ? I[N] : K>>
   ): Promise<ScanResult<T, P>> {
     const {Items: items = [], LastEvaluatedKey: lastKey} = await this.command(
@@ -176,7 +176,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
    * Perform a query operation with a key condition, and return an item iterator.
    * @param params
    */
-  async *queryIterator<P extends keyof T, N extends StringKeyOf<I>>(
+  async *queryIterator<P extends keyof T, N extends StringKeyOf<I> | undefined>(
       params: QueryParams<T, P, N, Key<T, N extends keyof I ? I[N] : K>>
   ): AsyncGenerator<Pick<T, P>> {
     const p = {...params};
