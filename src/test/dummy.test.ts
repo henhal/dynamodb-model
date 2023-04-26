@@ -1,4 +1,5 @@
 import {randomBytes} from 'crypto';
+import {Condition, SetValue, UpdateAction} from 'dynamodb-expressions';
 
 import DynamoClient, {isDynamoError} from '../';
 
@@ -7,9 +8,11 @@ type Person = {
   name: string;
   email?: string;
   age?: number;
+  data?: Record<string, string>;
 };
 
 const now = () => new Date().toJSON();
+const random = () => randomBytes(32).toString('hex');
 
 describe('Models', () => {
   it('should create model class', async () => {
@@ -19,22 +22,58 @@ describe('Models', () => {
         .withKey('id')
         .withIndex('name-age-index', 'name', 'age')
         .withCreator(x => ({
-          id: randomBytes(16).toString('hex'),
+          id: random(),
           createdTime: now(),
-          modifiedTime: now()
+          modifiedTime: now(),
+          version: random()
         }))
-        .withUpdater(x => ({modifiedTime: now()}))
-        .withTrigger((item, command, model) => console.log(`Trigger: ${model.name}.${command}: ${JSON.stringify(item)}`))
+        .withUpdater(x => ({
+          modifiedTime: now(),
+          version: random()
+        }))
+        .withTrigger((item, command, model) => {
+          console.log(`Trigger: ${model.name}.${command}: ${JSON.stringify(item)}`);
+        })
         .class() {}
 
     const persons = new PersonModel({client, name: 'persons'});
-    // await persons.atomicAction({key: {id: '42'}, conditionAttribute: 'modifiedTime'}, async ({key, conditions}) => {
-    //   return persons.update({
-    //     key,
-    //     attributes: {age: 42},
-    //     conditions
-    //   })
+
+    // await persons.update({
+    //   key: {id: '42'},
+    //   attributes: {
+    //     age: UpdateAction.add(2),
+    //     email: UpdateAction.remove(),
+    //     name: UpdateAction.set(SetValue.ifNotExists('name', 'Default Name'))
+    //   },
+    //   conditions: {
+    //     age: Condition.ge(18)
+    //   }
     // });
+    //
+    // await persons.put({
+    //   item: {
+    //     id: '42',
+    //     name: 'Alice'
+    //   }
+    // });
+    //
+    // async function updatePersonDataAtomic(id: string, data: Record<string, string>) {
+    //   await persons.atomicAction({
+    //     key: {id},
+    //     conditionAttribute: 'version'
+    //   }, async ({key, item, conditions}) => item && persons.update({
+    //     key,
+    //     attributes: {
+    //       data: {...item.data, ...data}
+    //     },
+    //     conditions
+    //   }));
+    // }
+    //
+    // await Promise.all([
+    //   updatePersonDataAtomic('42', {foo: 'hello'}),
+    //   updatePersonDataAtomic('42', {bar: 'world'})
+    // ]);
   });
 
   it('should identify errors', async () => {
