@@ -1,6 +1,7 @@
 import {DynamoClient} from './DynamoClient';
 
 export * from './types';
+export * from './errors';
 export * from './DynamoModel';
 export * from './DynamoTransaction';
 export * from './DynamoBatch';
