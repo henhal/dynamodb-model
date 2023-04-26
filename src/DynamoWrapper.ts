@@ -1,7 +1,13 @@
+import {ServiceInputTypes, ServiceOutputTypes} from '@aws-sdk/client-dynamodb';
 import {DynamoDBDocumentClient} from '@aws-sdk/lib-dynamodb';
+import {Command} from '@aws-sdk/types'
+
 import {DynamoClient} from './DynamoClient';
 
-type DynamoDbCommand = {input: any};
+type DynamoDbCommand<I, O> = Command<any, I, any, O, any>;
+type DynamoDbInput = ServiceInputTypes;
+type DynamoDbOutput = ServiceOutputTypes;
+type DynamoDbCommandExecutor<I extends DynamoDbInput, O extends DynamoDbOutput> = (client: DynamoDBDocumentClient, cmd: DynamoDbCommand<I, O>) => Promise<O>;
 
 export abstract class DynamoWrapper {
   constructor(readonly client: DynamoClient, readonly name?: string) {
@@ -11,13 +17,16 @@ export abstract class DynamoWrapper {
     return this.client.options.logger;
   }
 
-  protected async command<C extends DynamoDbCommand, O>(cmd: C, f: (dc: DynamoDBDocumentClient, cmd: C) => Promise<O>): Promise<O> {
+  protected async command<I extends DynamoDbInput, O extends DynamoDbOutput>(
+      cmd: DynamoDbCommand<I, O>,
+      executor: DynamoDbCommandExecutor<I, O> = (client, cmd) => client.send(cmd)
+  ): Promise<O> {
     const command = cmd.constructor.name;
     const {input} = cmd;
 
     try {
       this.logger?.debug({input}, `DynamoDB ${command} input`);
-      const output = await f(this.client.dc, cmd);
+      const output = await executor(this.client.dc, cmd);
       this.logger?.debug({output}, `DynamoDB ${command} output`);
       return output;
     } catch (err: any) {

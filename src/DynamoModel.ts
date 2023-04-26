@@ -1,5 +1,14 @@
 import {ConditionalCheckFailedException} from '@aws-sdk/client-dynamodb';
-import {DeleteCommand, GetCommand, PutCommand, QueryCommand, ScanCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb';
+import {
+  DeleteCommand,
+  GetCommand,
+  PutCommand,
+  QueryCommand,
+  ScanCommand,
+  UpdateCommand,
+  UpdateCommandOutput
+} from '@aws-sdk/lib-dynamodb';
+import {UpdateCommandInput} from '@aws-sdk/lib-dynamodb/dist-types/commands/UpdateCommand';
 import {Condition, ConditionAttributes} from 'dynamodb-expressions';
 import {DynamoClient} from './DynamoClient';
 import {DynamoWrapper} from './DynamoWrapper';
@@ -112,8 +121,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
       params: GetParams<T, K, P>
   ): Promise<GetResult<T>> {
     const {Item: item} = await this.command(
-        new GetCommand(createGetRequest(this, params)),
-        (dc, cmd) => dc.send(cmd));
+        new GetCommand(createGetRequest(this, params)));
 
     if (item) {
       return this.convertItem(item, params.projection) as T;
@@ -128,8 +136,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
       params: ScanParams<T, P, N> = {}
   ): Promise<ScanResult<T, P>> {
     const {Items: items = [], LastEvaluatedKey: lastKey} = await this.command(
-        new ScanCommand(createScanRequest(this, params)),
-        (dc, cmd) => dc.send(cmd));
+        new ScanCommand(createScanRequest(this, params)));
 
     return {
       items: this.convertItems(items, params.projection),
@@ -163,8 +170,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
       params: QueryParams<T, P, N, Key<T, N extends keyof I ? I[N] : K>>
   ): Promise<ScanResult<T, P>> {
     const {Items: items = [], LastEvaluatedKey: lastKey} = await this.command(
-        new QueryCommand(createQueryRequest(this, params)),
-        (dc, cmd) => dc.send(cmd));
+        new QueryCommand(createQueryRequest(this, params)));
 
     return {
       items: this.convertItems(items, params.projection),
@@ -201,8 +207,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
       params: PutParams<T, B>
   ): Promise<ItemResult<T>> {
     await this.command(
-        new PutCommand(createPutRequest(this, params)),
-        (dc, cmd) => dc.send(cmd));
+        new PutCommand(createPutRequest(this, params)));
     const item = this.convertItem(params.item);
 
     this.params.triggers.forEach(trigger => trigger(item, 'put', this));
@@ -214,8 +219,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
       params: UpdateParams<T, K, B>
   ): Promise<ItemResult<T>> {
     const {Attributes: attributes} = await this.command(
-        new UpdateCommand(createUpdateRequest(this, params)),
-        (dc, cmd) => dc.send(cmd));
+        new UpdateCommand(createUpdateRequest(this, params)));
     const item = this.convertItem(attributes);
 
     this.params.triggers.forEach(trigger => trigger(item, 'update', this));
@@ -231,8 +235,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
       params: DeleteParams<T, K>
   ): Promise<void> {
     const {Attributes: attributes} = await this.command(
-        new DeleteCommand(createDeleteRequest(this, params)),
-        (dc, cmd) => dc.send(cmd));
+        new DeleteCommand(createDeleteRequest(this, params)));
     const item = this.convertItem(attributes);
 
     this.params.triggers.forEach(trigger => trigger(item, 'delete', this));

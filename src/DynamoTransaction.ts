@@ -92,7 +92,7 @@ export class DynamoGetTransaction extends DynamoTransaction {
     try {
       await this.command(new TransactGetCommand({
         TransactItems: this.items,
-      }), (dc, cmd) => dc.send(cmd));
+      }));
     } catch (err) {
       this.err = err;
       throw err;
@@ -148,7 +148,7 @@ export class DynamoWriteTransaction extends DynamoTransaction {
       await this.command(new TransactWriteCommand({
         TransactItems: this.items,
         ClientRequestToken: token
-      }), (dc, cmd) => dc.send(cmd));
+      }));
     } catch (err) {
       this.err = err;
       throw err;

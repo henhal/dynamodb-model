@@ -54,8 +54,7 @@ export class DynamoBatchGetStatement extends DynamoWrapper {
 
   async execute(): Promise<{items: Array<BatchItem>; done: boolean}> {
     const {Responses: itemMap = {}, UnprocessedKeys: nextRequestMap} = await this.command(
-        new BatchGetCommand({RequestItems: this.requestMap}),
-        (dc, cmd) => dc.send(cmd));
+        new BatchGetCommand({RequestItems: this.requestMap}));
     const items: Array<BatchItem> = [];
 
     for (const [tableName, tableItems] of Object.entries(itemMap)) {
@@ -114,8 +113,7 @@ export class DynamoBatchWriteStatement extends DynamoWrapper {
 
   async execute(): Promise<{done: boolean;}> {
     const {UnprocessedItems: nextRequestMap} = await this.command(
-        new BatchWriteCommand({RequestItems: this.requestMap}),
-        (dc, cmd) => dc.send(cmd));
+        new BatchWriteCommand({RequestItems: this.requestMap}));
 
     for (const [tableName, requests] of Object.entries(this.requestMap)) {
       const model = this.modelMap.get(tableName)!;
