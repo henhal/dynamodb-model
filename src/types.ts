@@ -60,9 +60,12 @@ export type ModelParams<T extends Item, K extends KeyAttributes<T>, I extends Ke
   converters?: Array<ItemConverter<T>>;
 };
 
+export type ConsistencyLevel = 'eventual' | 'strong';
+
 export interface GetParams<T extends Item, K extends KeyAttributes<T>, P extends keyof T = keyof T> {
   key: KeyValue<T, K>;
   projection?: Array<P>;
+  consistency?: ConsistencyLevel;
 }
 
 export type GetResult<T extends Item> = T | undefined;
@@ -82,6 +85,7 @@ export interface ScanParams<T extends Item, P extends keyof T = keyof T, N exten
   limit?: number;
   projection?: Array<P>;
   filterConditions?: ConditionSet<Pick<T, F>>;
+  consistency?: ConsistencyLevel;
 }
 
 // Filter on query may not include key attributes

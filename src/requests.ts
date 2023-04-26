@@ -23,11 +23,12 @@ export function createGetRequest<T extends Item, K extends KeyAttributes<T>, P e
     model: DynamoModel<T>,
     params: GetParams<T, K, P>
 ): GetCommandInput {
-  const {key, projection} = params;
+  const {key, projection, consistency} = params;
   return {
     TableName: model.tableName,
     Key: key,
     ProjectionExpression: projection?.join(', '),
+    ConsistentRead: consistency === 'strong'
   };
 }
 
@@ -36,7 +37,14 @@ export function createScanRequest<T extends Item, P extends keyof T, N extends s
     params: ScanParams<T, P, N, F>,
 ): ScanCommandInput {
   const attr = {};
-  const {indexName, filterConditions, pageToken, limit, projection} = params;
+  const {
+    indexName,
+    filterConditions,
+    pageToken,
+    limit,
+    projection,
+    consistency
+  } = params;
 
   return {
     TableName: model.tableName,
@@ -45,6 +53,7 @@ export function createScanRequest<T extends Item, P extends keyof T, N extends s
     ExclusiveStartKey: parsePageToken(pageToken),
     Limit: limit,
     ProjectionExpression: projection?.join(', '),
+    ConsistentRead: consistency === 'strong',
     ...attr,
   };
 }
@@ -54,7 +63,16 @@ export function createQueryRequest<T extends Item, P extends keyof T, N extends 
     params: QueryParams<T, P, N, I>
 ): QueryCommandInput {
   const attr = {};
-  const {indexName, keyConditions, filterConditions, projection, limit, ascending, pageToken} = params;
+  const {
+    indexName,
+    keyConditions,
+    filterConditions,
+    projection,
+    limit,
+    ascending,
+    pageToken,
+    consistency
+  } = params;
 
   return {
     TableName: model.tableName,
@@ -65,6 +83,7 @@ export function createQueryRequest<T extends Item, P extends keyof T, N extends 
     Limit: limit,
     ProjectionExpression: projection?.join(', '),
     ScanIndexForward: ascending,
+    ConsistentRead: consistency === 'strong',
     ...attr,
   };
 }
