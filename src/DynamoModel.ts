@@ -431,7 +431,7 @@ export class DynamoModelBuilder<T extends Item, K extends KeyAttributes<T> = nev
    * const persons = new PersonModel({client, name: 'foo'});
    */
   class(options: ModelOptions = {}): abstract new (options?: ModelOptions) => DynamoModel<T, K, I, B> {
-    const builder = {...options, ...this};
+    const builder = {...this, ...options};
 
     return class extends DynamoModel<T, K, I, B> {
       constructor(options: ModelOptions = {}) {

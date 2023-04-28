@@ -1,9 +1,10 @@
-import {DynamoDBDocument, DynamoDBDocumentClient} from '@aws-sdk/lib-dynamodb';
-import {Item} from './types';
-import {DynamoTransactionProxy} from './DynamoTransaction';
-import {DynamoModelBuilder} from './DynamoModel';
-import {DynamoBatchStatementProxy} from './DynamoBatch';
 import {DynamoDBClient} from '@aws-sdk/client-dynamodb';
+import {DynamoDBDocument, DynamoDBDocumentClient} from '@aws-sdk/lib-dynamodb';
+
+import {DynamoBatchStatementProxy} from './DynamoBatch';
+import {DynamoModelBuilder} from './DynamoModel';
+import {DynamoTransactionProxy} from './DynamoTransaction';
+import {Item} from './types';
 
 function defaultDc() {
   return DynamoDBDocument.from(new DynamoDBClient({}));
