@@ -175,3 +175,33 @@ export type ModelIndexKeyValue<Model extends DynamoModel<any>, N extends ModelIn
     Model extends DynamoModel<infer T, infer K, infer I> ?
         KeyValue<T, I[N]> :
         never;
+
+/**
+ * Obtain a type for the get params of a model
+ */
+export type ModelGetParams<Model extends DynamoModel<any>> = Parameters<Model['get']>[0];
+
+/**
+ * Obtain a type for the scan params of a model
+ */
+export type ModelScanParams<Model extends DynamoModel<any>> = Parameters<Model['scan']>[0];
+
+/**
+ * Obtain a type for the query params of a model
+ */
+export type ModelQueryParams<Model extends DynamoModel<any>> = Parameters<Model['query']>[0];
+
+/**
+ * Obtain a type for the put params of a model
+ */
+export type ModelPutParams<Model extends DynamoModel<any>> = Parameters<Model['put']>[0];
+
+/**
+ * Obtain a type for the update params of a model
+ */
+export type ModelUpdateParams<Model extends DynamoModel<any>> = Parameters<Model['update']>[0];
+
+/**
+ * Obtain a type for the delete params of a model
+ */
+export type ModelDeleteParams<Model extends DynamoModel<any>> = Parameters<Model['delete']>[0];
