@@ -175,3 +175,37 @@ export type ModelIndexKeyValue<Model extends DynamoModel<any>, N extends ModelIn
     Model extends DynamoModel<infer T, infer K, infer I> ?
         KeyValue<T, I[N]> :
         never;
+
+/**
+ * Obtain a type for the get params of a model
+ */
+export type ModelGetParams<Model extends DynamoModel<any>, P extends StringKeyOf<ModelItem<Model>> = StringKeyOf<ModelItem<Model>>> =
+    Model extends DynamoModel<infer T, infer K> ?
+        GetParams<T, K, P> :
+        never;
+
+/**
+ * Obtain a type for the scan params of a model
+ */
+export type ModelScanParams<Model extends DynamoModel<any>, P extends StringKeyOf<ModelItem<Model>> = StringKeyOf<ModelItem<Model>>, N extends ModelIndexName<Model> | undefined = ModelIndexName<Model> | undefined> =
+    Model extends DynamoModel<infer T, infer K, infer I> ?
+        ScanParams<T, P, N> :
+        never;
+
+/**
+ * Obtain a type for the scan params of a model
+ */
+export type ModelQueryParams<Model extends DynamoModel<any>, P extends StringKeyOf<ModelItem<Model>> = StringKeyOf<ModelItem<Model>>, N extends ModelIndexName<Model> | undefined = ModelIndexName<Model> | undefined> =
+    Model extends DynamoModel<infer T, infer K, infer I> ?
+        Parameters<Model['query']>[0] :
+//        QueryParams<T, P, N, Key<T, N extends keyof I ? I[N] : K>> :
+        never;
+
+/**
+ * Obtain a type for the update params of a model
+ */
+export type ModelUpdateParams<Model extends DynamoModel<any>> =
+    Model extends DynamoModel<infer T, infer K, infer I, infer B> ?
+        // UpdateParams<T, K, B> :
+        Parameters<Model['update']>[0] :
+        never;
