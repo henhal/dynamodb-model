@@ -3,7 +3,7 @@ import {
   ConditionCheckParams,
   DeleteParams,
   GetParams, Item,
-  KeyAttributes, PutParams,
+  KeyAttributes, ProjectionKeys, PutParams,
   QueryParams,
   ScanParams,
   UpdateParams,
@@ -19,7 +19,7 @@ import {buildConditionExpression, buildUpdateExpression} from 'dynamodb-expressi
 import {DynamoModel} from './DynamoModel';
 import {parsePageToken} from './utils';
 
-export function createGetRequest<T extends Item, K extends KeyAttributes<T>, P extends keyof T>(
+export function createGetRequest<T extends Item, K extends KeyAttributes<T>, P extends ProjectionKeys<T>>(
     model: DynamoModel<T>,
     params: GetParams<T, K, P>
 ): GetCommandInput {
@@ -32,7 +32,7 @@ export function createGetRequest<T extends Item, K extends KeyAttributes<T>, P e
   };
 }
 
-export function createScanRequest<T extends Item, P extends keyof T, N extends string, F extends keyof T>(
+export function createScanRequest<T extends Item, P extends ProjectionKeys<T>, N extends string, F extends ProjectionKeys<T>>(
     model: DynamoModel<T>,
     params: ScanParams<T, P, N, F>,
 ): ScanCommandInput {
@@ -58,7 +58,7 @@ export function createScanRequest<T extends Item, P extends keyof T, N extends s
   };
 }
 
-export function createQueryRequest<T extends Item, P extends keyof T, N extends string, I extends keyof T>(
+export function createQueryRequest<T extends Item, P extends ProjectionKeys<T>, N extends string, I extends keyof T>(
     model: DynamoModel<T>,
     params: QueryParams<T, P, N, I>
 ): QueryCommandInput {

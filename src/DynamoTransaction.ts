@@ -6,7 +6,16 @@ import {
   TransactWriteCommandInput,
 } from '@aws-sdk/lib-dynamodb';
 
-import {ConditionCheckParams, DeleteParams, GetParams, Item, KeyAttributes, PutParams, UpdateParams} from './types';
+import {
+  ConditionCheckParams,
+  DeleteParams,
+  GetParams,
+  Item,
+  KeyAttributes,
+  ProjectionKeys,
+  PutParams,
+  UpdateParams
+} from './types';
 import {
   createConditionCheckRequest,
   createDeleteRequest,
@@ -40,7 +49,7 @@ export class DynamoTransactionProxy extends DynamoWrapper {
     return new DynamoWriteTransaction(this.client, this.name).delete(model, ...paramsList);
   }
 
-  get<T extends Item, K extends KeyAttributes<T>, P extends keyof T>(
+  get<T extends Item, K extends KeyAttributes<T>, P extends ProjectionKeys<T>>(
       model: DynamoModel<T, K>,
       ...paramsList: Array<GetParams<T, K, P>>
   ): DynamoGetTransaction {
@@ -79,7 +88,7 @@ export abstract class DynamoTransaction extends DynamoWrapper {
 export class DynamoGetTransaction extends DynamoTransaction {
   private readonly items: NonNullable<TransactGetCommandInput['TransactItems']> = [];
 
-  get<T extends Item, K extends KeyAttributes<T>, P extends keyof T>(
+  get<T extends Item, K extends KeyAttributes<T>, P extends ProjectionKeys<T>>(
       model: DynamoModel<T, K>,
       ...paramsList: Array<GetParams<T, K, P>>
   ): DynamoGetTransaction {

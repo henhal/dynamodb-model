@@ -6,9 +6,7 @@ import {
   QueryCommand,
   ScanCommand,
   UpdateCommand,
-  UpdateCommandOutput
 } from '@aws-sdk/lib-dynamodb';
-import {UpdateCommandInput} from '@aws-sdk/lib-dynamodb/dist-types/commands/UpdateCommand';
 import {Condition, ConditionAttributes} from 'dynamodb-expressions';
 import {DynamoClient} from './DynamoClient';
 import {DynamoWrapper} from './DynamoWrapper';
@@ -30,8 +28,9 @@ import {
   Key,
   KeyAttributes,
   KeyIndices,
+  KeyOf,
   KeyValue,
-  ModelParams,
+  ModelParams, Projection, ProjectionKeys,
   PutParams,
   QueryParams,
   ScanParams,
@@ -47,7 +46,7 @@ export class ModelOptions {
   tableName?: string;
 }
 
-export interface AtomicActionParams<T extends Item, K extends KeyAttributes<T>, C extends keyof T> {
+export interface AtomicActionParams<T extends Item, K extends KeyAttributes<T>, C extends KeyOf<T>> {
   key: KeyValue<T, K>;
   conditionAttribute: C,
   maxAttempts?: number;
@@ -87,7 +86,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
     super(client);
   }
 
-  private convertItem<P extends keyof T = keyof T>(item: any, projection?: P[]): Pick<T, P> {
+  private convertItem<P extends ProjectionKeys<T> = null>(item: any, projection?: P[]): Projection<T, P> {
     const {converters} = this.params;
 
     if (converters) {
@@ -96,10 +95,10 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
       }
     }
 
-    return item as Pick<T, P>;
+    return item as Projection<T, P>;
   }
 
-  private convertItems<P extends keyof T = keyof T>(items: any[], projection?: P[]): Array<Pick<T, P>> {
+  private convertItems<P extends ProjectionKeys<T> = null>(items: any[], projection?: P[]): Array<Projection<T, P>> {
     const {converters} = this.params;
 
     if (converters) {
@@ -110,21 +109,21 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
       }
     }
 
-    return items as Array<Pick<T, P>>;
+    return items as Array<Projection<T, P>>;
   }
 
   /**
    * Get a single item
    * @param params
    */
-  async get<P extends keyof T>(
+  async get<P extends ProjectionKeys<T> = null>(
       params: GetParams<T, K, P>
-  ): Promise<GetResult<T>> {
+  ): Promise<GetResult<T, P>> {
     const {Item: item} = await this.command(
         new GetCommand(createGetRequest(this, params)));
 
     if (item) {
-      return this.convertItem(item, params.projection) as T;
+      return this.convertItem(item, params.projection);
     }
   }
 
@@ -132,7 +131,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
    * Perform a scan operation, i.e., a query without any key condition, and return a page of items.
    * @param params
    */
-  async scan<P extends keyof T, N extends StringKeyOf<I> | undefined>(
+  async scan<P extends ProjectionKeys<T> = null, N extends StringKeyOf<I> | undefined = undefined>(
       params: ScanParams<T, P, N> = {}
   ): Promise<ScanResult<T, P>> {
     const {Items: items = [], LastEvaluatedKey: lastKey} = await this.command(
@@ -148,9 +147,9 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
    * Perform a scan operation, i.e., a query without any key condition, and return an item iterator.
    * @param params
    */
-  async *scanIterator<P extends keyof T, N extends StringKeyOf<I> | undefined >(
+  async *scanIterator<P extends ProjectionKeys<T> = null, N extends StringKeyOf<I> | undefined = undefined>(
       params: ScanParams<T, P, N> = {}
-  ): AsyncGenerator<Pick<T, P>> {
+  ): AsyncGenerator<Projection<T, P>> {
     const p = {...params};
     do {
       const {items, nextPageToken} = await this.scan(p);
@@ -166,7 +165,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
    * Perform a query operation with a key condition, and return a page of items.
    * @param params
    */
-  async query<P extends keyof T, N extends StringKeyOf<I> | undefined>(
+  async query<P extends ProjectionKeys<T> = null, N extends StringKeyOf<I> | undefined = undefined>(
       params: QueryParams<T, P, N, Key<T, N extends keyof I ? I[N] : K>>
   ): Promise<ScanResult<T, P>> {
     const {Items: items = [], LastEvaluatedKey: lastKey} = await this.command(
@@ -182,9 +181,9 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
    * Perform a query operation with a key condition, and return an item iterator.
    * @param params
    */
-  async *queryIterator<P extends keyof T, N extends StringKeyOf<I> | undefined>(
+  async *queryIterator<P extends ProjectionKeys<T> = null, N extends StringKeyOf<I> | undefined = undefined>(
       params: QueryParams<T, P, N, Key<T, N extends keyof I ? I[N] : K>>
-  ): AsyncGenerator<Pick<T, P>> {
+  ): AsyncGenerator<Projection<T, P>> {
     const p = {...params};
     do {
       const {items, nextPageToken} = await this.query(p);
@@ -259,7 +258,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
    * @param [params.maxAttempts] Max number of attempts
    * @param action Function called to perform the action on the item
    */
-  async atomicAction<C extends keyof T, R>(
+  async atomicAction<C extends KeyOf<T>, R>(
       params: AtomicActionParams<T, K, C>,
       action: (params: AtomicActionFuncParams<T, K>) => Promise<R>
   ): Promise<R> {

@@ -6,9 +6,27 @@ import {StringKeyOf} from './utils';
 // Note that B is _allowed_ to be written but could be overwritten by creators/updaters.
 
 export type Item = Record<string, any>;
+type DistributedOmit<T, K extends keyof any> = T extends any ? Omit<T, K> : never;
+type DistributedPick<T, K extends keyof T> = T extends any ? Pick<T, Extract<K, keyof T>> : never;
+export type KeyOf<T> = T extends any ? keyof T : never;
+type Optional<T extends Item, B extends Item> = DistributedOmit<T, keyof B> & Partial<B>;
+export type ProjectionKeys<T> = KeyOf<T> | null;
+//export type Projection<T, K extends KeyOf<T> | null> = K extends KeyOf<T> ? DistributedPick<T, K> : T;
+export type Projection<T, K extends ProjectionKeys<T>> = K extends null ? T : K extends KeyOf<T> ? DistributedPick<T, K> : never;
 
-type Optional<T extends Item, B extends Item> = Omit<T, keyof B> & Partial<B>;
-
+// type Foo = {a: 'FOO', b: number}
+// type Bar = {a: 'BAR', c: string}
+// type X = Foo | Bar;
+// type A = Projection<X, 'a'|'c'|'b'>;
+// function foo(a: A) {
+//   if (a.a === 'BAR') {
+//     a.c
+//   } else {
+//     a.b
+//   }
+//   a.b
+// }
+// const a: A = {a: 'FOO'}
 /**
  * The name of an attribute within K
  */
@@ -49,7 +67,7 @@ export type Trigger<T extends Item, K extends KeyAttributes<T>> =
  * @param [projection] An array containing which keys of the item are available, and hence which subset of T the item
  * must fulfill. If not present, the item must be of the full type T.
  */
-export type ItemConverter<T> = <P extends keyof T>(item: any, projection?: P[]) => void;
+export type ItemConverter<T> = <P extends ProjectionKeys<T>>(item: any, projection?: P[]) => void;
 
 export type ModelParams<T extends Item, K extends KeyAttributes<T>, I extends KeyIndices<T>, B> = {
   keyAttributes?: K;
@@ -62,35 +80,35 @@ export type ModelParams<T extends Item, K extends KeyAttributes<T>, I extends Ke
 
 export type ConsistencyLevel = 'eventual' | 'strong';
 
-export interface GetParams<T extends Item, K extends KeyAttributes<T>, P extends keyof T = keyof T> {
+export interface GetParams<T extends Item, K extends KeyAttributes<T>, P extends ProjectionKeys<T> = null> {
   key: KeyValue<T, K>;
-  projection?: Array<P>;
+  projection?: P[];
   consistency?: ConsistencyLevel;
 }
 
-export type GetResult<T extends Item> = T | undefined;
+export type GetResult<T extends Item, P extends ProjectionKeys<T> = null> = Projection<T, P> | undefined;
 
 export type ItemResult<T extends Item> = {
   item: T;
 }
 
-export interface ScanResult<T extends Item, P extends keyof T = keyof T> {
-  items: Array<Pick<T, P>>,
+export interface ScanResult<T extends Item, P extends ProjectionKeys<T> = null> {
+  items: Array<Projection<T, P>>,
   nextPageToken?: string
 }
 
-export interface ScanParams<T extends Item, P extends keyof T = keyof T, N extends string | undefined = string | undefined, F extends keyof T = keyof T> {
+export interface ScanParams<T extends Item, P extends ProjectionKeys<T> = null, N extends string | undefined = string | undefined, F extends ProjectionKeys<T> = null> {
   indexName?: N;
   pageToken?: string;
   limit?: number;
-  projection?: Array<P>;
-  filterConditions?: ConditionSet<Pick<T, F>>;
+  projection?: P[];
+  filterConditions?: ConditionSet<Projection<T, F>>;
   consistency?: ConsistencyLevel;
 }
 
 // Filter on query may not include key attributes
-export interface QueryParams<T extends Item, P extends keyof T = keyof T, N extends string | undefined = string | undefined, I extends keyof T = keyof T>
-    extends ScanParams<T, P, N, Exclude<keyof T, I>> {
+export interface QueryParams<T extends Item, P extends ProjectionKeys<T> = null, N extends string | undefined = string | undefined, I extends keyof T = keyof T>
+    extends ScanParams<T, P, N, Exclude<KeyOf<T>, I>> {
   keyConditions: ConditionSet<Pick<T, I>>;
   ascending?: boolean;
 }
