@@ -145,15 +145,18 @@ export type ModelItem<Model extends DynamoModel<any>> = Model extends DynamoMode
 /**
  * Obtain a type for the input item of a model, i.e., type T but with the attributes of type B being optional as
  * they are created automatically
+ * The second parameter is optional and enables supplying a subset of T, for example if a model is used with a union
+ * type. For example, for a FooBarModel<Foo | Bar>, it's possible to do ModelInputItem<FooBarModel, Foo> to get the
+ * Foo specific input item.
  */
-export type ModelInputItem<Model> = Model extends DynamoModel<infer T, infer K, infer I, infer B> ?
+export type ModelInputItem<Model extends DynamoModel<any>, T extends ModelItem<Model> = ModelItem<Model>> = Model extends DynamoModel<any, any, any, infer B> ?
     Optional<T, B> :
     never;
 
 /**
  * Obtain a type for the base item B of a model, i.e., the attributes that are created automatically
  */
-export type ModelBaseItem<Model> = Model extends DynamoModel<infer T, infer K, infer I, infer B> ?
+export type ModelBaseItem<Model extends DynamoModel<any>> = Model extends DynamoModel<any, any, any, infer B> ?
     B :
     never;
 
