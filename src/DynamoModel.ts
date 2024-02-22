@@ -12,7 +12,7 @@ import {
   createUpdateRequest,
 } from './requests';
 import {
-  DeleteParams,
+  DeleteParams, Extend,
   FullProjection,
   GetParams,
   GetResult,
@@ -330,7 +330,7 @@ export class DynamoModelBuilder<T extends Item, K extends KeyAttributes<T> = nev
    */
   // Ideally this would be item: WrittenItem<T, _B> but then _B cannot be inferred from the return type
   withCreator<_B>(creator: (item: T) => _B) {
-    const builder = this as unknown as DynamoModelBuilder<T & _B, K, I, B & _B>;
+    const builder = this as unknown as DynamoModelBuilder<Extend<T, _B>, K, I, Extend<B, _B>>;
 
     builder.params.creators.push(creator as any);
 

@@ -8,6 +8,7 @@ import {StringKeyOf} from './utils';
 export type Item = Record<string, any>;
 type DistributedOmit<T, K extends keyof any> = T extends any ? Omit<T, K> : never;
 type Optional<T extends Item, B extends Item> = DistributedOmit<T, keyof B> & Partial<B>;
+export type Extend<T, B> = T extends B ? T : T & B;
 
 export type FullProjection = null;
 export type ProjectionKeys<T> = keyof T | FullProjection;
