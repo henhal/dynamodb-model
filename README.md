@@ -262,3 +262,51 @@ Note that this example of course is a bit silly, it's possible to natively updat
 however handling the case where `data` is undefined is not supported in a single update operation.
 More advanced atomic updates may include concurrently modifying array elements etc. 
 
+### Working with union types
+
+Since data modelled in DynamoDB frequently combines different kind of data in the same table, it's quite common to
+have data expressed as unions:
+
+```
+interface Base {
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Foo extends Base {
+  type: 'foo'; // discriminator field
+  id: string;
+  name: string;
+}
+
+interface Bar extends Base {
+  type: 'bar'; // discriminator field
+  id: string;
+  something: number;
+}
+
+type FooBar = Foo | Bar;
+
+class FooBarModel extends DynamoClient.model<FooBar>()
+  .withKey('type', 'id') // composite key - silly example since the hash key is poorly chosen :)
+  .withCreator(item => ({createdAt: now(), updatedAt: now()}))
+  .withUpdater(item => Object.assign(item, {updatedAt: now()}))
+  .class() {}
+  
+const model = new FooBarModel(...);
+```
+
+Now, if querying for data which is narrowed to one of the types, it's possible to add a `type` property which 
+changes the type of the returned data from `Foo | Bar` to `Bar`.
+This is done using the `as<Type>()` function, which is simply a wrapper for a dummy token used to represent the type. 
+  
+```
+const { items } = await model.query({
+  type: as<Bar>(),
+  keyConditions: {
+    type: 'bar'
+  }
+});
+
+return items.map(item => item.something); // item is of type Bar
+```

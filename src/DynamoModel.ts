@@ -12,7 +12,8 @@ import {
   createUpdateRequest,
 } from './requests';
 import {
-  DeleteParams, Extend,
+  DeleteParams,
+  Extend,
   FullProjection,
   GetParams,
   GetResult,
