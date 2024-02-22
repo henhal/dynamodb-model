@@ -19,9 +19,9 @@ import {buildConditionExpression, buildUpdateExpression} from 'dynamodb-expressi
 import {DynamoModel} from './DynamoModel';
 import {parsePageToken} from './utils';
 
-export function createGetRequest<T extends Item, K extends KeyAttributes<T>, P extends ProjectionKeys<T>>(
+export function createGetRequest<T extends Item, K extends KeyAttributes<T>, P extends ProjectionKeys<T2>, T2 extends T = T>(
     model: DynamoModel<T>,
-    params: GetParams<T, K, P>
+    params: GetParams<T2, K, P>
 ): GetCommandInput {
   const {key, projection, consistency} = params;
   return {
@@ -32,9 +32,9 @@ export function createGetRequest<T extends Item, K extends KeyAttributes<T>, P e
   };
 }
 
-export function createScanRequest<T extends Item, P extends ProjectionKeys<T>, N extends string, F extends ProjectionKeys<T>>(
+export function createScanRequest<T extends Item, P extends ProjectionKeys<T2>, N extends string, F extends ProjectionKeys<T2>, T2 extends T = T>(
     model: DynamoModel<T>,
-    params: ScanParams<T, P, N, F>,
+    params: ScanParams<T2, P, N, F>,
 ): ScanCommandInput {
   const attr = {};
   const {
@@ -58,9 +58,9 @@ export function createScanRequest<T extends Item, P extends ProjectionKeys<T>, N
   };
 }
 
-export function createQueryRequest<T extends Item, P extends ProjectionKeys<T>, N extends string, I extends keyof T>(
+export function createQueryRequest<T extends Item, P extends ProjectionKeys<T2>, N extends string, I extends keyof T, T2 extends T = T>(
     model: DynamoModel<T>,
-    params: QueryParams<T, P, N, I>
+    params: QueryParams<T2, P, N, I>
 ): QueryCommandInput {
   const attr = {};
   const {
@@ -88,9 +88,9 @@ export function createQueryRequest<T extends Item, P extends ProjectionKeys<T>, 
   };
 }
 
-export function createPutRequest<T extends Item, B extends Item>(
+export function createPutRequest<T extends Item, B extends Item, T2 extends T = T>(
     model: DynamoModel<T>,
-    params: PutParams<T, B>
+    params: PutParams<T2, B>
 ): PutCommandInput {
   const attr = {};
   const {item, conditions} = params;
@@ -105,9 +105,9 @@ export function createPutRequest<T extends Item, B extends Item>(
   };
 }
 
-export function createUpdateRequest<T extends Item, K extends KeyAttributes<T>, B extends Item>(
+export function createUpdateRequest<T extends Item, K extends KeyAttributes<T>, B extends Item, T2 extends T = T>(
     model: DynamoModel<T, K>,
-    params: UpdateParams<T, K, B>
+    params: UpdateParams<T2, K, B>
 ) {
   const attr = {};
   const {key, attributes, conditions} = params;

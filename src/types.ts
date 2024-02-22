@@ -7,12 +7,22 @@ import {StringKeyOf} from './utils';
 
 export type Item = Record<string, any>;
 type DistributedOmit<T, K extends keyof any> = T extends any ? Omit<T, K> : never;
-type DistributedPick<T, K extends keyof T> = T extends any ? Pick<T, Extract<K, keyof T>> : never;
 export type KeyOf<T> = T extends any ? keyof T : never;
 type Optional<T extends Item, B extends Item> = DistributedOmit<T, keyof B> & Partial<B>;
-export type ProjectionKeys<T> = KeyOf<T> | null;
-//export type Projection<T, K extends KeyOf<T> | null> = K extends KeyOf<T> ? DistributedPick<T, K> : T;
-export type Projection<T, K extends ProjectionKeys<T>> = K extends null ? T : K extends KeyOf<T> ? DistributedPick<T, K> : never;
+export type FullProjection = null;
+export type ProjectionKeys<T> = keyof T | FullProjection;
+export type Projection<T, K extends ProjectionKeys<T>> = [K] extends [null] ? T : [K] extends [keyof T] ? Pick<T, K> : never;
+
+const TYPE_TOKEN = Symbol();
+
+export type TypeToken<T> = T;
+export function as<T>(): TypeToken<T> {
+  return TYPE_TOKEN as T;
+}
+
+// T : K
+// extends KeyOf<T> ?
+// Pick<T, K> : never;
 
 // type Foo = {a: 'FOO', b: number}
 // type Bar = {a: 'BAR', c: string}
@@ -67,7 +77,7 @@ export type Trigger<T extends Item, K extends KeyAttributes<T>> =
  * @param [projection] An array containing which keys of the item are available, and hence which subset of T the item
  * must fulfill. If not present, the item must be of the full type T.
  */
-export type ItemConverter<T> = <P extends ProjectionKeys<T>>(item: any, projection?: P[]) => void;
+export type ItemConverter<T> = <P extends ProjectionKeys<T2>, T2 extends T = T>(item: any, projection?: P[]) => void;
 
 export type ModelParams<T extends Item, K extends KeyAttributes<T>, I extends KeyIndices<T>, B> = {
   keyAttributes?: K;
@@ -81,6 +91,7 @@ export type ModelParams<T extends Item, K extends KeyAttributes<T>, I extends Ke
 export type ConsistencyLevel = 'eventual' | 'strong';
 
 export interface GetParams<T extends Item, K extends KeyAttributes<T>, P extends ProjectionKeys<T> = null> {
+  type?: TypeToken<T>;
   key: KeyValue<T, K>;
   projection?: P[];
   consistency?: ConsistencyLevel;
@@ -98,6 +109,7 @@ export interface ScanResult<T extends Item, P extends ProjectionKeys<T> = null> 
 }
 
 export interface ScanParams<T extends Item, P extends ProjectionKeys<T> = null, N extends string | undefined = string | undefined, F extends ProjectionKeys<T> = null> {
+  type?: TypeToken<T>;
   indexName?: N;
   pageToken?: string;
   limit?: number;
@@ -108,12 +120,13 @@ export interface ScanParams<T extends Item, P extends ProjectionKeys<T> = null, 
 
 // Filter on query may not include key attributes
 export interface QueryParams<T extends Item, P extends ProjectionKeys<T> = null, N extends string | undefined = string | undefined, I extends keyof T = keyof T>
-    extends ScanParams<T, P, N, Exclude<KeyOf<T>, I>> {
+    extends ScanParams<T, P, N, Exclude<keyof T, I>> {
   keyConditions: ConditionSet<Pick<T, I>>;
   ascending?: boolean;
 }
 
 export interface PutParams<T extends Item, B extends Item> {
+  type?: TypeToken<T>;
   item: Optional<T, B>;
   conditions?: ConditionSet<T>;
 }
