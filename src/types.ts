@@ -7,8 +7,8 @@ import {StringKeyOf} from './utils';
 
 export type Item = Record<string, any>;
 type DistributedOmit<T, K extends keyof any> = T extends any ? Omit<T, K> : never;
-export type KeyOf<T> = T extends any ? keyof T : never;
 type Optional<T extends Item, B extends Item> = DistributedOmit<T, keyof B> & Partial<B>;
+
 export type FullProjection = null;
 export type ProjectionKeys<T> = keyof T | FullProjection;
 export type Projection<T, K extends ProjectionKeys<T>> = [K] extends [null] ? T : [K] extends [keyof T] ? Pick<T, K> : never;
@@ -16,27 +16,11 @@ export type Projection<T, K extends ProjectionKeys<T>> = [K] extends [null] ? T 
 const TYPE_TOKEN = Symbol();
 
 export type TypeToken<T> = T;
+
 export function as<T>(): TypeToken<T> {
   return TYPE_TOKEN as T;
 }
 
-// T : K
-// extends KeyOf<T> ?
-// Pick<T, K> : never;
-
-// type Foo = {a: 'FOO', b: number}
-// type Bar = {a: 'BAR', c: string}
-// type X = Foo | Bar;
-// type A = Projection<X, 'a'|'c'|'b'>;
-// function foo(a: A) {
-//   if (a.a === 'BAR') {
-//     a.c
-//   } else {
-//     a.b
-//   }
-//   a.b
-// }
-// const a: A = {a: 'FOO'}
 /**
  * The name of an attribute within K
  */
@@ -90,8 +74,11 @@ export type ModelParams<T extends Item, K extends KeyAttributes<T>, I extends Ke
 
 export type ConsistencyLevel = 'eventual' | 'strong';
 
-export interface GetParams<T extends Item, K extends KeyAttributes<T>, P extends ProjectionKeys<T> = null> {
+interface Typable<T> {
   type?: TypeToken<T>;
+}
+
+export interface GetParams<T extends Item, K extends KeyAttributes<T>, P extends ProjectionKeys<T> = null> extends Typable<T> {
   key: KeyValue<T, K>;
   projection?: P[];
   consistency?: ConsistencyLevel;
@@ -108,8 +95,8 @@ export interface ScanResult<T extends Item, P extends ProjectionKeys<T> = null> 
   nextPageToken?: string
 }
 
-export interface ScanParams<T extends Item, P extends ProjectionKeys<T> = null, N extends string | undefined = string | undefined, F extends ProjectionKeys<T> = null> {
-  type?: TypeToken<T>;
+export interface ScanParams<T extends Item, P extends ProjectionKeys<T> = null, N extends string | undefined = string | undefined, F extends ProjectionKeys<T> = null>
+  extends Typable<T> {
   indexName?: N;
   pageToken?: string;
   limit?: number;
@@ -125,8 +112,7 @@ export interface QueryParams<T extends Item, P extends ProjectionKeys<T> = null,
   ascending?: boolean;
 }
 
-export interface PutParams<T extends Item, B extends Item> {
-  type?: TypeToken<T>;
+export interface PutParams<T extends Item, B extends Item> extends Typable<T> {
   item: Optional<T, B>;
   conditions?: ConditionSet<T>;
 }
@@ -136,7 +122,7 @@ export interface DeleteParams<T extends Item, K extends KeyAttributes<T>> {
   conditions?: ConditionSet<T>;
 }
 
-export interface UpdateParams<T extends Item, K extends KeyAttributes<T>, B extends Item> {
+export interface UpdateParams<T extends Item, K extends KeyAttributes<T>, B extends Item> extends Typable<T> {
   key: KeyValue<T, K>;
   attributes: UpdateAttributes<Optional<T, B>>;
   conditions?: ConditionSet<T>;

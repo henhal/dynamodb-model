@@ -1,14 +1,5 @@
 import {ConditionCheck} from '@aws-sdk/client-dynamodb';
 import {
-  ConditionCheckParams,
-  DeleteParams,
-  GetParams, Item,
-  KeyAttributes, ProjectionKeys, PutParams,
-  QueryParams,
-  ScanParams,
-  UpdateParams,
-} from './types';
-import {
   DeleteCommandInput,
   GetCommandInput,
   PutCommandInput,
@@ -17,6 +8,18 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import {buildConditionExpression, buildUpdateExpression} from 'dynamodb-expressions';
 import {DynamoModel} from './DynamoModel';
+import {
+  ConditionCheckParams,
+  DeleteParams,
+  GetParams,
+  Item,
+  KeyAttributes,
+  ProjectionKeys,
+  PutParams,
+  QueryParams,
+  ScanParams,
+  UpdateParams,
+} from './types';
 import {parsePageToken} from './utils';
 
 export function createGetRequest<T extends Item, K extends KeyAttributes<T>, P extends ProjectionKeys<T2>, T2 extends T = T>(
