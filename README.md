@@ -310,3 +310,27 @@ const { items } = await model.query({
 
 return items.map(item => item.something); // item is of type Bar
 ```
+
+### Table metrics
+
+Each operation on a table stores the consumed capacity of that operation (read and write) in the DynamoClient instance,
+so that it's easy to get metrics for each table.
+
+```
+const client = new DynamoClient();
+const persons = new PersonModel(client, 'persons');
+const products = new ProductModel(client, 'products');
+
+await persons.get(...)
+await persons.update(...)
+await persons.put(...)
+await products.update(...)
+await products.put(...)
+await persons.put(...)
+await client.batch().put(..., ...)
+
+const metrics = client.getTableMetrics();
+// returns e.g. persons => {rcu: 20, wcu: 50}, products => {rcu: 4, wcu: 10}
+```
+
+To clear the metrics, use `client.clearTableMetrics()`.
