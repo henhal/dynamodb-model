@@ -4,7 +4,8 @@ import {
   GetCommandInput,
   PutCommandInput,
   QueryCommandInput,
-  ScanCommandInput
+  ScanCommandInput,
+  UpdateCommandInput
 } from '@aws-sdk/lib-dynamodb';
 import {buildConditionExpression, buildUpdateExpression} from 'dynamodb-expressions';
 import {DynamoModel} from './DynamoModel';
@@ -25,7 +26,7 @@ import {
 import {parsePageToken} from './utils';
 
 export function getReturnedConsumedCapacity({client}: DynamoWrapper) {
-  return client.options.enableTableMetrics ? 'TOTAL' : 'NONE';
+  return client.options.enableTableMetrics ? 'INDEXES' : 'NONE';
 }
 
 export function createGetRequest<T extends Item, K extends KeyAttributes<T>, P extends ProjectionKeys<T2>, T2 extends T = T>(
@@ -121,7 +122,7 @@ export function createPutRequest<T extends Item, B extends Item, T2 extends T = 
 export function createUpdateRequest<T extends Item, K extends KeyAttributes<T>, B extends Item, T2 extends T = T>(
     model: DynamoModel<T, K>,
     params: UpdateParams<T2, K, B>
-) {
+): UpdateCommandInput {
   const attr = {};
   const {key, attributes, conditions} = params;
   Object.assign(attributes, ...model.params.updaters.map(updater => updater(attributes)));
