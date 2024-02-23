@@ -44,11 +44,15 @@ export interface TableMetrics {
   /**
    * The consumed read capacity units
    */
-  rcu: number;
+  rcu?: number;
   /**
    * The consumed write capacity units
    */
-  wcu: number;
+  wcu?: number;
+  /**
+   * The consumed combined capacity units
+   */
+  cu?: number;
 }
 
 /**

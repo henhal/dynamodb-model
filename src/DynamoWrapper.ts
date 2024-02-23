@@ -45,21 +45,30 @@ export abstract class DynamoWrapper {
     for (const item of items) {
       const {
         TableName: tableName,
-        ReadCapacityUnits: rcu = 0,
-        WriteCapacityUnits: wcu = 0
+        ReadCapacityUnits: rcu ,
+        WriteCapacityUnits: wcu ,
+        CapacityUnits: cu
       } = item;
 
       if (tableName) {
         const metrics = tableMetrics.get(tableName);
 
         if (metrics) {
-          metrics.rcu += rcu;
-          metrics.wcu += wcu;
+          if (rcu) {
+            metrics.rcu = (metrics.rcu ?? 0) + rcu;
+          }
+          if (wcu) {
+            metrics.wcu = (metrics.wcu ?? 0) + wcu;
+          }
+          if (cu) {
+            metrics.cu = (metrics.cu ?? 0) + cu;
+          }
         } else {
           tableMetrics.set(tableName, {
             tableName,
             rcu,
-            wcu
+            wcu,
+            cu
           });
         }
       }
