@@ -1,4 +1,4 @@
-import {ServiceInputTypes, ServiceOutputTypes} from '@aws-sdk/client-dynamodb';
+import {ConsumedCapacity, ServiceInputTypes, ServiceOutputTypes} from '@aws-sdk/client-dynamodb';
 import {DynamoDBDocumentClient} from '@aws-sdk/lib-dynamodb';
 import {Command} from '@aws-sdk/types'
 
@@ -27,6 +27,9 @@ export abstract class DynamoWrapper {
     try {
       this.logger?.debug({input}, `DynamoDB ${command} input`);
       const output = await executor(this.client.dc, cmd);
+      if ('ConsumedCapacity' in output) {
+        this.logConsumedCapacity(output.ConsumedCapacity);
+      }
       this.logger?.debug({output}, `DynamoDB ${command} output`);
       return output;
     } catch (err: any) {
@@ -34,4 +37,33 @@ export abstract class DynamoWrapper {
       throw err;
     }
   }
+
+  private logConsumedCapacity(consumedCapacity: ConsumedCapacity | ConsumedCapacity[] = []): void {
+    const items = Array.isArray(consumedCapacity) ? consumedCapacity : [consumedCapacity];
+    const tableMetrics = this.client.getTableMetrics();
+
+    for (const item of items) {
+      const {
+        TableName: tableName,
+        ReadCapacityUnits: rcu = 0,
+        WriteCapacityUnits: wcu = 0
+      } = item;
+
+      if (tableName) {
+        const metrics = tableMetrics.get(tableName);
+
+        if (metrics) {
+          metrics.rcu += rcu;
+          metrics.wcu += wcu;
+        } else {
+          tableMetrics.set(tableName, {
+            tableName,
+            rcu,
+            wcu
+          });
+        }
+      }
+    }
+  }
 }
+

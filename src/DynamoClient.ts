@@ -29,9 +29,28 @@ export interface Options {
 }
 
 /**
+ * Metrics for a table
+ */
+export interface TableMetrics {
+  /**
+   * The name of the table
+   */
+  tableName: string;
+  /**
+   * The consumed read capacity units
+   */
+  rcu: number;
+  /**
+   * The consumed write capacity units
+   */
+  wcu: number;
+}
+
+/**
  * A DynamoDB client
  */
 export class DynamoClient {
+  private tableMetrics = new Map<string, TableMetrics>();
 
   /**
    * Create a model for a DynamoDB table without supplying the runtime parameters.
@@ -70,6 +89,20 @@ export class DynamoClient {
    */
   batch(name?: string): DynamoBatchStatementProxy {
     return new DynamoBatchStatementProxy(this, name);
+  }
+
+  /**
+   * Get metrics for each table operated on by this client instance
+   */
+  getTableMetrics(): Map<string, TableMetrics> {
+    return this.tableMetrics;
+  }
+
+  /**
+   * Clear the table metrics
+   */
+  clearTableMetrics(): void {
+    this.tableMetrics.clear();
   }
 }
 
