@@ -119,7 +119,9 @@ export class DynamoWriteTransaction extends DynamoTransaction {
       model: DynamoModel<T, K, any, B>,
       ...paramsList: Array<PutParams<T, B>>
   ): DynamoWriteTransaction {
-    this.items.push(...paramsList.map(params => ({Put: createPutRequest(model, params)})));
+    this.items.push(...paramsList.map(params => ({
+      Put: createPutRequest(model, params)
+    })));
     this.modelMap.set(model.tableName, model);
 
     return this;
@@ -129,7 +131,9 @@ export class DynamoWriteTransaction extends DynamoTransaction {
       model: DynamoModel<T, K, any, B>,
       ...paramsList: Array<UpdateParams<T, K, B>>
   ): DynamoWriteTransaction {
-    this.items.push(...paramsList.map(params => ({Update: createUpdateRequest(model, params)})));
+    this.items.push(...paramsList.map(params => ({
+      Update: createUpdateRequest(model, params)
+    })));
     this.modelMap.set(model.tableName, model);
 
     return this;
@@ -139,7 +143,9 @@ export class DynamoWriteTransaction extends DynamoTransaction {
       model: DynamoModel<T, K>,
       ...paramsList: Array<DeleteParams<T, K>>
   ): DynamoWriteTransaction {
-    this.items.push(...paramsList.map(params => ({Delete: createDeleteRequest(model, params)})));
+    this.items.push(...paramsList.map(params => ({
+      Delete: createDeleteRequest(model, params)
+    })));
     this.modelMap.set(model.tableName, model);
 
     return this;

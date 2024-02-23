@@ -122,7 +122,9 @@ export function createPutRequest<T extends Item, B extends Item, T2 extends T = 
 export function createUpdateRequest<T extends Item, K extends KeyAttributes<T>, B extends Item, T2 extends T = T>(
     model: DynamoModel<T, K>,
     params: UpdateParams<T2, K, B>
-): UpdateCommandInput {
+): UpdateCommandInput & {UpdateExpression: string | undefined;} {
+  // Type mismatch with DynamoDB lib - update items within transactions require UpdateExpression to be present even if
+  // it's undefined, it must not be absent
   const attr = {};
   const {key, attributes, conditions} = params;
   Object.assign(attributes, ...model.params.updaters.map(updater => updater(attributes)));
