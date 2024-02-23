@@ -5,6 +5,16 @@ import {
   TransactWriteCommand,
   TransactWriteCommandInput,
 } from '@aws-sdk/lib-dynamodb';
+import {DynamoModel} from './DynamoModel';
+import {DynamoWrapper} from './DynamoWrapper';
+import {
+  createConditionCheckRequest,
+  createDeleteRequest,
+  createGetRequest,
+  createPutRequest,
+  createUpdateRequest,
+  getReturnedConsumedCapacity,
+} from './requests';
 
 import {
   ConditionCheckParams,
@@ -16,15 +26,6 @@ import {
   PutParams,
   UpdateParams
 } from './types';
-import {
-  createConditionCheckRequest,
-  createDeleteRequest,
-  createGetRequest,
-  createPutRequest,
-  createUpdateRequest,
-} from './requests';
-import {DynamoModel} from './DynamoModel';
-import {DynamoWrapper} from './DynamoWrapper';
 import {parseRequest} from './utils';
 
 export class DynamoTransactionProxy extends DynamoWrapper {
@@ -101,6 +102,7 @@ export class DynamoGetTransaction extends DynamoTransaction {
     try {
       await this.command(new TransactGetCommand({
         TransactItems: this.items,
+        ReturnConsumedCapacity: getReturnedConsumedCapacity(this)
       }));
     } catch (err) {
       this.err = err;
@@ -156,7 +158,8 @@ export class DynamoWriteTransaction extends DynamoTransaction {
     try {
       await this.command(new TransactWriteCommand({
         TransactItems: this.items,
-        ClientRequestToken: token
+        ClientRequestToken: token,
+        ReturnConsumedCapacity: getReturnedConsumedCapacity(this)
       }));
     } catch (err) {
       this.err = err;

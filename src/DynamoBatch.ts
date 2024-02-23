@@ -2,7 +2,7 @@ import {DeleteParams, GetParams, Item, KeyAttributes, ProjectionKeys, PutParams}
 import {BatchGetCommand, BatchGetCommandInput, BatchWriteCommand, BatchWriteCommandInput} from '@aws-sdk/lib-dynamodb';
 import {DynamoWrapper} from './DynamoWrapper';
 import {DynamoModel} from './DynamoModel';
-import {createDeleteRequest, createGetRequest, createPutRequest} from './requests';
+import {createDeleteRequest, createGetRequest, createPutRequest, getReturnedConsumedCapacity} from './requests';
 import {getKeyValues, parseRequest} from './utils';
 
 type BatchItem<T extends Item = Item> = {
@@ -54,7 +54,10 @@ export class DynamoBatchGetStatement extends DynamoWrapper {
 
   async execute(): Promise<{items: Array<BatchItem>; done: boolean}> {
     const {Responses: itemMap = {}, UnprocessedKeys: nextRequestMap} = await this.command(
-        new BatchGetCommand({RequestItems: this.requestMap}));
+        new BatchGetCommand({
+          RequestItems: this.requestMap,
+          ReturnConsumedCapacity: getReturnedConsumedCapacity(this)
+        }));
     const items: Array<BatchItem> = [];
 
     for (const [tableName, tableItems] of Object.entries(itemMap)) {
@@ -113,7 +116,10 @@ export class DynamoBatchWriteStatement extends DynamoWrapper {
 
   async execute(): Promise<{done: boolean;}> {
     const {UnprocessedItems: nextRequestMap} = await this.command(
-        new BatchWriteCommand({RequestItems: this.requestMap}));
+        new BatchWriteCommand({
+          RequestItems: this.requestMap,
+          ReturnConsumedCapacity: getReturnedConsumedCapacity(this)
+        }));
 
     for (const [tableName, requests] of Object.entries(this.requestMap)) {
       const model = this.modelMap.get(tableName)!;

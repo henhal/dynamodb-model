@@ -8,9 +8,11 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import {buildConditionExpression, buildUpdateExpression} from 'dynamodb-expressions';
 import {DynamoModel} from './DynamoModel';
+import {DynamoWrapper} from './DynamoWrapper';
 import {
   ConditionCheckParams,
   DeleteParams,
+  Extend,
   GetParams,
   Item,
   KeyAttributes,
@@ -22,6 +24,10 @@ import {
 } from './types';
 import {parsePageToken} from './utils';
 
+export function getReturnedConsumedCapacity({client}: DynamoWrapper) {
+  return client.options.enableTableMetrics ? 'TOTAL' : 'NONE';
+}
+
 export function createGetRequest<T extends Item, K extends KeyAttributes<T>, P extends ProjectionKeys<T2>, T2 extends T = T>(
     model: DynamoModel<T>,
     params: GetParams<T2, K, P>
@@ -31,7 +37,8 @@ export function createGetRequest<T extends Item, K extends KeyAttributes<T>, P e
     TableName: model.tableName,
     Key: key,
     ProjectionExpression: projection?.join(', '),
-    ConsistentRead: consistency === 'strong'
+    ConsistentRead: consistency === 'strong',
+    ReturnConsumedCapacity: getReturnedConsumedCapacity(model),
   };
 }
 
@@ -57,6 +64,7 @@ export function createScanRequest<T extends Item, P extends ProjectionKeys<T2>, 
     Limit: limit,
     ProjectionExpression: projection?.join(', '),
     ConsistentRead: consistency === 'strong',
+    ReturnConsumedCapacity: getReturnedConsumedCapacity(model),
     ...attr,
   };
 }
@@ -87,6 +95,7 @@ export function createQueryRequest<T extends Item, P extends ProjectionKeys<T2>,
     ProjectionExpression: projection?.join(', '),
     ScanIndexForward: ascending,
     ConsistentRead: consistency === 'strong',
+    ReturnConsumedCapacity: getReturnedConsumedCapacity(model),
     ...attr,
   };
 }
@@ -98,12 +107,13 @@ export function createPutRequest<T extends Item, B extends Item, T2 extends T = 
   const attr = {};
   const {item, conditions} = params;
 
-  const fullItem: T & B = Object.assign(item, ...model.params.creators.map(creator => creator(item)));
+  const fullItem: Extend<T, B> = Object.assign(item, ...model.params.creators.map(creator => creator(item)));
 
   return {
     TableName: model.tableName,
     Item: fullItem,
     ConditionExpression: conditions && buildConditionExpression(conditions, attr),
+    ReturnConsumedCapacity: getReturnedConsumedCapacity(model),
     ...attr,
   };
 }
@@ -122,6 +132,7 @@ export function createUpdateRequest<T extends Item, K extends KeyAttributes<T>, 
     ReturnValues: 'ALL_NEW',
     UpdateExpression: buildUpdateExpression(attributes, attr),
     ConditionExpression: conditions && buildConditionExpression(conditions, attr),
+    ReturnConsumedCapacity: getReturnedConsumedCapacity(model),
     ...attr,
   };
 }
@@ -138,6 +149,7 @@ export function createDeleteRequest<T extends Item, K extends KeyAttributes<T>>(
     Key: key,
     ReturnValues: 'ALL_OLD',
     ConditionExpression: conditions && buildConditionExpression(conditions, attr),
+    ReturnConsumedCapacity: getReturnedConsumedCapacity(model),
     ...attr,
   };
 }

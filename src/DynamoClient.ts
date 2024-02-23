@@ -26,6 +26,11 @@ export interface Options {
    * A logger used for debugging. This will log the complete input and output of all commands.
    */
   logger?: Logger;
+
+  /**
+   * Whether to enable table metrics
+   */
+  enableTableMetrics?: boolean;
 }
 
 /**
@@ -92,7 +97,8 @@ export class DynamoClient {
   }
 
   /**
-   * Get metrics for each table operated on by this client instance
+   * Get metrics for each table operated on by this client instance.
+   * For metrics to be collected, the option enableTableMetrics must be true when constructing the client.
    */
   getTableMetrics(): Map<string, TableMetrics> {
     return this.tableMetrics;
@@ -102,7 +108,7 @@ export class DynamoClient {
    * Clear the table metrics
    */
   clearTableMetrics(): void {
-    this.tableMetrics.clear();
+    this.tableMetrics = new Map();
   }
 }
 
