@@ -45,7 +45,7 @@ export class DynamoBatchGetStatement extends DynamoWrapper {
       if (!keys) {
         this.requestMap[model.tableName] = {Keys: keys = []};
       }
-      keys.push(createGetRequest(model, params));
+      keys.push(params.key);
       this.modelMap.set(model.tableName, model);
     }
 
@@ -70,7 +70,13 @@ export class DynamoBatchGetStatement extends DynamoWrapper {
 
     this.requestMap = nextRequestMap ?? {};
 
-    return {items, done: !nextRequestMap};
+    // Keys that don't exist end up as unprocessed items, so clients should only loop if !done && items.length > 0,
+    // otherwise there will be an infinite loop trying to fetch non-existent items.
+
+    return {
+      items,
+      done: Object.keys(this.requestMap).length === 0
+    };
   }
 }
 
@@ -139,6 +145,8 @@ export class DynamoBatchWriteStatement extends DynamoWrapper {
 
     this.requestMap = nextRequestMap ?? {};
 
-    return {done: !nextRequestMap};
+    return {
+      done: Object.keys(this.requestMap).length === 0
+    };
   }
 }
