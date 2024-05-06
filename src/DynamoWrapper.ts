@@ -9,6 +9,29 @@ type DynamoDbInput = ServiceInputTypes;
 type DynamoDbOutput = ServiceOutputTypes;
 type DynamoDbCommandExecutor<I extends DynamoDbInput, O extends DynamoDbOutput> = (client: DynamoDBDocumentClient, cmd: DynamoDbCommand<I, O>) => Promise<O>;
 
+function truncate(data: unknown): unknown {
+  if (data == null) {
+    return data;
+  } else if (Array.isArray(data)) {
+    const result = data.slice(0, 2).map(truncate);
+    const rest = data.length - result.length;
+
+    if (rest > 0) {
+      result.push(` ... ${rest} more items`)
+    }
+    return result;
+  } else if (typeof data === 'object') {
+    const result: Record<string, any> = {};
+
+    for (const [k, v] of Object.entries(data)) {
+      result[k] = truncate(v);
+    }
+    return result;
+  } else {
+    return data;
+  }
+}
+
 export abstract class DynamoWrapper {
   constructor(readonly client: DynamoClient, readonly name?: string) {
   }
@@ -25,12 +48,12 @@ export abstract class DynamoWrapper {
     const {input} = cmd;
 
     try {
-      this.logger?.debug({input}, `DynamoDB ${command} input`);
+      this.logger?.debug({input: truncate(input)}, `DynamoDB ${command} input`);
       const output = await executor(this.client.dc, cmd);
       if ('ConsumedCapacity' in output) {
         this.logConsumedCapacity(output.ConsumedCapacity);
       }
-      this.logger?.debug({output}, `DynamoDB ${command} output`);
+      this.logger?.debug({output: truncate(output)}, `DynamoDB ${command} output`);
       return output;
     } catch (err: any) {
       this.logger?.debug({err}, `DynamoDB ${command} error: ${err.message}`);
