@@ -9,6 +9,22 @@ type DynamoDbInput = ServiceInputTypes;
 type DynamoDbOutput = ServiceOutputTypes;
 type DynamoDbCommandExecutor<I extends DynamoDbInput, O extends DynamoDbOutput> = (client: DynamoDBDocumentClient, cmd: DynamoDbCommand<I, O>) => Promise<O>;
 
+function getCommandType(command: string) {
+  switch (command) {
+    case 'BatchGetItemCommandInput':
+    case 'GetItemCommandInput':
+    case 'QueryCommandInput':
+    case 'ScanCommandInput':
+      return 'read';
+
+    case 'BatchWriteItemCommandInput':
+    case 'DeleteItemCommandInput':
+    case 'PutItemCommandInput':
+    case 'UpdateItemCommandInput':
+      return 'write';
+  }
+}
+
 function truncate(data: unknown): unknown {
   if (data == null) {
     return data;
@@ -51,7 +67,7 @@ export abstract class DynamoWrapper {
       this.logger?.debug({input: truncate(input)}, `DynamoDB ${command} input`);
       const output = await executor(this.client.dc, cmd);
       if ('ConsumedCapacity' in output) {
-        this.logConsumedCapacity(output.ConsumedCapacity);
+        this.logConsumedCapacity(command, output.ConsumedCapacity);
       }
       this.logger?.debug({output: truncate(output)}, `DynamoDB ${command} output`);
       return output;
@@ -61,16 +77,17 @@ export abstract class DynamoWrapper {
     }
   }
 
-  private logConsumedCapacity(consumedCapacity: ConsumedCapacity | ConsumedCapacity[] = []): void {
+  private logConsumedCapacity(command: string, consumedCapacity: ConsumedCapacity | ConsumedCapacity[] = []): void {
+    const type = getCommandType(command);
     const items = Array.isArray(consumedCapacity) ? consumedCapacity : [consumedCapacity];
     const tableMetrics = this.client.getTableMetrics();
 
     for (const item of items) {
       const {
         TableName: tableName,
-        ReadCapacityUnits: rcu ,
-        WriteCapacityUnits: wcu ,
-        CapacityUnits: cu
+        CapacityUnits: cu,
+        ReadCapacityUnits: rcu = type === 'read' ? cu : undefined ,
+        WriteCapacityUnits: wcu = type === 'write' ? cu : undefined
       } = item;
 
       if (tableName) {
