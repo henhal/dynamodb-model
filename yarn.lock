@@ -2061,10 +2061,10 @@ domexception@^2.0.1:
   dependencies:
     webidl-conversions "^5.0.0"
 
-dynamodb-expressions@^3.2.1:
-  version "3.2.1"
-  resolved "https://registry.npmjs.org/dynamodb-expressions/-/dynamodb-expressions-3.2.1.tgz"
-  integrity sha512-HB8Zumz6jdESEg+CSVR+1jWUQaJp0uh/k20qKMlIukNqnvU05X9DAfke5pO+O0edycgwQWvvZDSSOmFscs17Rg==
+dynamodb-expressions@^3.2.2:
+  version "3.2.2"
+  resolved "https://registry.npmjs.org/dynamodb-expressions/-/dynamodb-expressions-3.2.2.tgz"
+  integrity sha512-2xJCLD6JzUiDF1cpwXhK1nwPkyLN7p/trxbzL5260mNOiXmoww1o96T+qxp2RlnNHam12HENZeRGSk0oisFNLg==
 
 ecc-jsbn@~0.1.1:
   version "0.1.2"
