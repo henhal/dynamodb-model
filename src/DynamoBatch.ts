@@ -1,4 +1,4 @@
-import {DeleteParams, GetParams, Item, KeyAttributes, ProjectionKeys, PutParams} from './types';
+import {DeleteParams, GetParams, Item, KeyAttributes, KeyValue, ProjectionKeys, PutParams} from './types';
 import {BatchGetCommand, BatchGetCommandInput, BatchWriteCommand, BatchWriteCommandInput} from '@aws-sdk/lib-dynamodb';
 import {DynamoWrapper} from './DynamoWrapper';
 import {DynamoModel} from './DynamoModel';
@@ -9,6 +9,35 @@ type BatchItem<T extends Item = Item> = {
   model: DynamoModel<T>;
   item: T;
 };
+
+type BatchCommand<T extends Item = Item> = {
+  model: DynamoModel<T>;
+  command: 'put' | 'delete';
+  key: KeyValue<T, KeyAttributes<T>>
+};
+
+type BatchResult<T> = {
+  items: T[];
+  done: boolean;
+};
+
+async function* batchResultIterator<T>(execute: () => Promise<BatchResult<T>>): AsyncGenerator<T> {
+  let delay = 100;
+
+  while (true) {
+    const {items, done} = await execute();
+
+    for (const item of items) {
+      yield item;
+    }
+
+    if (done) {
+      return;
+    }
+    await new Promise(resolve => setTimeout(resolve, Math.random() * delay));
+    delay *= 2;
+  }
+}
 
 export class DynamoBatchStatementProxy extends DynamoWrapper {
   get<T extends Item, K extends KeyAttributes<T>, P extends ProjectionKeys<T>>(
@@ -52,7 +81,12 @@ export class DynamoBatchGetStatement<T0 extends Item> extends DynamoWrapper {
     return this as any;
   }
 
-  async execute<T extends Item = T0>(): Promise<{items: Array<BatchItem<T>>; done: boolean}> {
+  /**
+   * Execute the statements in this batch and return the retrieved items.
+   * Note that while done is false, some statements were not executed and this method should then be called again,
+   * preferably after utilizing exponential backoff.
+   */
+  async execute<T extends Item = T0>(): Promise<BatchResult<BatchItem<T>>> {
     const {Responses: itemMap = {}, UnprocessedKeys: nextRequestMap} = await this.command(
         new BatchGetCommand({
           RequestItems: this.requestMap,
@@ -77,6 +111,14 @@ export class DynamoBatchGetStatement<T0 extends Item> extends DynamoWrapper {
       items,
       done: Object.keys(this.requestMap).length === 0
     };
+  }
+
+  /**
+   * Returns an iterator which executes the statements in this batch and returns the retrieved items until done,
+   * adding a random delay between batches.
+   */
+  async *executeIterator<T extends Item = T0>(): AsyncGenerator<BatchItem<T>> {
+    yield* batchResultIterator(() => this.execute<T>());
   }
 }
 
@@ -120,12 +162,18 @@ export class DynamoBatchWriteStatement<T0 extends Item> extends DynamoWrapper {
     return this;
   }
 
-  async execute(): Promise<{done: boolean;}> {
+  /**
+   * Execute the statements in this batch. Note that while done is false, some statements were not executed and this
+   * method should then be called again, preferably after utilizing exponential backoff.
+   */
+  async execute<T extends Item = T0>(): Promise<BatchResult<BatchCommand<T>>> {
     const {UnprocessedItems: nextRequestMap} = await this.command(
         new BatchWriteCommand({
           RequestItems: this.requestMap,
           ReturnConsumedCapacity: getReturnedConsumedCapacity(this)
         }));
+
+    const items: Array<BatchCommand<any>> = [];
 
     for (const [tableName, requests] of Object.entries(this.requestMap)) {
       const model = this.modelMap.get(tableName)!;
@@ -138,7 +186,9 @@ export class DynamoBatchWriteStatement<T0 extends Item> extends DynamoWrapper {
         const keyValue = JSON.stringify(getKeyValues(key, model.params.keyAttributes));
 
         if (!nextKeyValues?.some(v => v === keyValue)) {
+          // This request was processed
           model.params.triggers.forEach(trigger => trigger(key, command, model));
+          items.push({model, command, key} as BatchCommand<any>);
         }
       }
     }
@@ -146,7 +196,15 @@ export class DynamoBatchWriteStatement<T0 extends Item> extends DynamoWrapper {
     this.requestMap = nextRequestMap ?? {};
 
     return {
+      items,
       done: Object.keys(this.requestMap).length === 0
     };
+  }
+
+  /**
+   * Returns an iterator which executes the statements in this batch until done, adding a random delay between batches.
+   */
+  async *executeIterator<T extends Item = T0>(): AsyncGenerator<BatchCommand<T>> {
+    yield* batchResultIterator(() => this.execute<T>());
   }
 }
