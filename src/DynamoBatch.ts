@@ -2,7 +2,7 @@ import {DeleteParams, GetParams, Item, KeyAttributes, ProjectionKeys, PutParams}
 import {BatchGetCommand, BatchGetCommandInput, BatchWriteCommand, BatchWriteCommandInput} from '@aws-sdk/lib-dynamodb';
 import {DynamoWrapper} from './DynamoWrapper';
 import {DynamoModel} from './DynamoModel';
-import {createDeleteRequest, createGetRequest, createPutRequest, getReturnedConsumedCapacity} from './requests';
+import {createDeleteRequest, createPutRequest, getReturnedConsumedCapacity} from './requests';
 import {getKeyValues, parseRequest} from './utils';
 
 type BatchItem<T extends Item = Item> = {
@@ -13,32 +13,32 @@ type BatchItem<T extends Item = Item> = {
 export class DynamoBatchStatementProxy extends DynamoWrapper {
   get<T extends Item, K extends KeyAttributes<T>, P extends ProjectionKeys<T>>(
       model: DynamoModel<T, K>, ...paramsList: Array<GetParams<T, K, P>>
-  ): DynamoBatchGetStatement {
-    return new DynamoBatchGetStatement(this.client, this.name).get(model, ...paramsList);
+  ): DynamoBatchGetStatement<T> {
+    return new DynamoBatchGetStatement<T>(this.client, this.name).get(model, ...paramsList);
   }
 
   put<T extends Item, K extends KeyAttributes<T>, B extends Item>(
       model: DynamoModel<T, K, any, B>,
       ...paramsList: Array<Pick<PutParams<T, B>, 'item'>>
-  ): DynamoBatchWriteStatement {
-    return new DynamoBatchWriteStatement(this.client, this.name).put(model, ...paramsList);
+  ): DynamoBatchWriteStatement<T> {
+    return new DynamoBatchWriteStatement<T>(this.client, this.name).put(model, ...paramsList);
   }
 
   delete<T extends Item, K extends KeyAttributes<T>>(
       model: DynamoModel<T, K>,
       ...paramsList: Array<Pick<DeleteParams<T, K>, 'key'>>
-  ): DynamoBatchWriteStatement {
-    return new DynamoBatchWriteStatement(this.client, this.name).delete(model, ...paramsList);
+  ): DynamoBatchWriteStatement<T> {
+    return new DynamoBatchWriteStatement<T>(this.client, this.name).delete(model, ...paramsList);
   }
 }
 
-export class DynamoBatchGetStatement extends DynamoWrapper {
+export class DynamoBatchGetStatement<T0 extends Item> extends DynamoWrapper {
   private requestMap: NonNullable<BatchGetCommandInput['RequestItems']> = {};
   private readonly modelMap = new Map<string, DynamoModel<any>>();
 
   get<T extends Item, K extends KeyAttributes<T>, P extends ProjectionKeys<T>>(
       model: DynamoModel<T, K>, ...paramsList: Array<GetParams<T, K, P>>
-  ): DynamoBatchGetStatement {
+  ): DynamoBatchGetStatement<T0 | T> {
     for (const params of paramsList) {
       let keys = this.requestMap[model.tableName]?.Keys;
 
@@ -49,16 +49,16 @@ export class DynamoBatchGetStatement extends DynamoWrapper {
       this.modelMap.set(model.tableName, model);
     }
 
-    return this;
+    return this as any;
   }
 
-  async execute(): Promise<{items: Array<BatchItem>; done: boolean}> {
+  async execute<T extends Item = T0>(): Promise<{items: Array<BatchItem<T>>; done: boolean}> {
     const {Responses: itemMap = {}, UnprocessedKeys: nextRequestMap} = await this.command(
         new BatchGetCommand({
           RequestItems: this.requestMap,
           ReturnConsumedCapacity: getReturnedConsumedCapacity(this)
         }));
-    const items: Array<BatchItem> = [];
+    const items: Array<BatchItem<any>> = [];
 
     for (const [tableName, tableItems] of Object.entries(itemMap)) {
       const model = this.modelMap.get(tableName)!;
@@ -80,14 +80,14 @@ export class DynamoBatchGetStatement extends DynamoWrapper {
   }
 }
 
-export class DynamoBatchWriteStatement extends DynamoWrapper {
+export class DynamoBatchWriteStatement<T0 extends Item> extends DynamoWrapper {
   private requestMap: NonNullable<BatchWriteCommandInput['RequestItems']> = {};
   private readonly modelMap = new Map<string, DynamoModel<any>>();
 
   put<T extends Item, K extends KeyAttributes<T>, B extends Item>(
       model: DynamoModel<T, K, any, B>,
       ...paramsList: Array<Pick<PutParams<T, B>, 'item'>>
-  ): DynamoBatchWriteStatement {
+  ): DynamoBatchWriteStatement<T0 | T> {
     for (const params of paramsList) {
       let requestItems = this.requestMap[model.tableName];
 
@@ -105,7 +105,7 @@ export class DynamoBatchWriteStatement extends DynamoWrapper {
   delete<T extends Item, K extends KeyAttributes<T>>(
       model: DynamoModel<T, K>,
       ...paramsList: Array<Pick<DeleteParams<T, K>, 'key'>>
-  ): DynamoBatchWriteStatement {
+  ): DynamoBatchWriteStatement<T0 | T> {
     for (const params of paramsList) {
       let requestItems = this.requestMap[model.tableName];
 
