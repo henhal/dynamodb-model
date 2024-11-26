@@ -1,6 +1,6 @@
 import {ConditionalCheckFailedException} from '@aws-sdk/client-dynamodb';
 import {DeleteCommand, GetCommand, PutCommand, QueryCommand, ScanCommand, UpdateCommand,} from '@aws-sdk/lib-dynamodb';
-import {Condition, ConditionAttributes} from 'dynamodb-expressions';
+import {Condition, ConditionAttributes, UpdateAttributes} from 'dynamodb-expressions';
 import {DynamoClient} from './DynamoClient';
 import {DynamoWrapper} from './DynamoWrapper';
 import {
@@ -343,7 +343,7 @@ export class DynamoModelBuilder<T extends Item, K extends KeyAttributes<T> = nev
    * This can for example be used to automatically update timestamps when updating items.
    * @param updater A function that may modify items being updated.
    */
-  withUpdater(updater: (item: Partial<T>) => Partial<T>) {
+  withUpdater(updater: (item: Partial<T>) => UpdateAttributes<T>) {
     this.params.updaters.push(updater);
 
     return this;

@@ -77,7 +77,7 @@ describe('Models', () => {
   });
 
   it('should identify errors', async () => {
-    const client = new DynamoClient();
+    const client = new DynamoClient(undefined, {logger: {debug: console.log}});
 
     class PersonModel extends DynamoClient.model<Person>()
         .withKey('id')
@@ -87,11 +87,15 @@ describe('Models', () => {
           createdTime: now(),
           modifiedTime: now()
         }))
-        .withUpdater(x => ({modifiedTime: now()}))
+        .withUpdater(x => ({
+            createdTime: UpdateAction.set(SetValue.ifNotExists('createdTime', now())),
+            modifiedTime: now()
+        }))
         .withTrigger((item, command, model) => console.log(`Trigger: ${model.name}.${command}: ${JSON.stringify(item)}`))
         .class() {}
 
     const persons = new PersonModel({client, name: 'persons'});
+    await persons.update({key: {id: '42'}, attributes: {age: 40}});
     const error = await persons.get({key: {id: '42'}}).catch(err => err);
     expect(error).toBeInstanceOf(Error);
     expect(isDynamoError(error, 'RequestLimitExceeded')).toBeFalsy();

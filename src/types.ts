@@ -68,7 +68,7 @@ export type ModelParams<T extends Item, K extends KeyAttributes<T>, I extends Ke
   keyAttributes?: K;
   indices: I;
   creators: Array<(item: any) => Partial<B>>;
-  updaters: Array<(attributes: any) => Partial<T>>;
+  updaters: Array<(attributes: any) => UpdateAttributes<T>>;
   triggers: Array<Trigger<T, K>>;
   converters?: Array<ItemConverter<T>>;
 };
