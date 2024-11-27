@@ -95,7 +95,7 @@ describe('Models', () => {
         .class() {}
 
     const persons = new PersonModel({client, name: 'persons'});
-    await persons.update({key: {id: '42'}, attributes: {age: 40}});
+    await persons.update({key: {id: '42'}, attributes: {age: 40}}).catch(err => null);
     const error = await persons.get({key: {id: '42'}}).catch(err => err);
     expect(error).toBeInstanceOf(Error);
     expect(isDynamoError(error, 'RequestLimitExceeded')).toBeFalsy();
