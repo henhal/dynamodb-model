@@ -38,12 +38,12 @@ export type KeyAttributes<T> = SingleKey<T> | TupleKey<T>;
 /**
  * Key name(s) in a single or tuple key
  */
-export type Key<T, K extends KeyAttributes<T>> = K[number];
+export type Key<T, K extends KeyAttributes<T> = KeyAttributes<T>> = K[number];
 /**
  * A key value, such as {foo: 42} for a single key ['foo'] of a {foo: number, bar: string} model,
  * or {foo: 42, bar: 'hello'} for a tuple key ['foo', 'bar'] of the same model.
  */
-export type KeyValue<T, K extends KeyAttributes<T>> = Pick<T, Key<T, K>>;
+export type KeyValue<T, K extends KeyAttributes<T> = KeyAttributes<T>> = Pick<T, Key<T, K>>;
 
 /**
  * Index definitions for a model, as a dictionary of names to key definitions
