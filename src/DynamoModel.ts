@@ -211,7 +211,7 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
     return {item};
   }
 
-  async update<T2 extends T = T, R extends ReturnValue = 'new'>(
+  async update<T2 extends T = T, R extends ReturnValue = 'all_new'>(
       params: UpdateParams<T2, K, B, R>
   ): Promise<ItemResult<T2, R>> {
     const {Attributes: attributes} = await this.command(

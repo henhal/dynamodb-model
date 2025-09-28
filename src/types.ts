@@ -87,8 +87,8 @@ export interface GetParams<T extends Item, K extends KeyAttributes<T>, P extends
 
 export type GetResult<T extends Item, P extends ProjectionKeys<T> = null> = Projection<T, P> | undefined;
 
-export type ItemResult<T extends Item, R extends ReturnValue = 'new'> = {
-  item: R extends 'new' ? T : T | undefined;
+export type ItemResult<T extends Item, R extends ReturnValue = 'all_new'> = {
+  item: R extends 'all_new' ? T : T | undefined;
 }
 
 export interface ScanResult<T extends Item, P extends ProjectionKeys<T> = null> {
@@ -123,9 +123,9 @@ export interface DeleteParams<T extends Item, K extends KeyAttributes<T>> {
   conditions?: ConditionSet<T>;
 }
 
-export type ReturnValue = 'new' | 'old';
+export type ReturnValue = 'all_new' | 'all_old';
 
-export interface UpdateParams<T extends Item, K extends KeyAttributes<T>, B extends Item, R extends ReturnValue = 'new'> extends Typable<T> {
+export interface UpdateParams<T extends Item, K extends KeyAttributes<T>, B extends Item, R extends ReturnValue = 'all_new'> extends Typable<T> {
   key: KeyValue<T, K>;
   attributes: UpdateAttributes<Optional<T, B>>;
   conditions?: ConditionSet<T>;
