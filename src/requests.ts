@@ -20,6 +20,7 @@ import {
   ProjectionKeys,
   PutParams,
   QueryParams,
+  ReturnValue,
   ScanParams,
   UpdateParams,
 } from './types';
@@ -119,20 +120,20 @@ export function createPutRequest<T extends Item, B extends Item, T2 extends T = 
   };
 }
 
-export function createUpdateRequest<T extends Item, K extends KeyAttributes<T>, B extends Item, T2 extends T = T>(
+export function createUpdateRequest<T extends Item, K extends KeyAttributes<T>, B extends Item, T2 extends T = T, R extends ReturnValue = 'all_new'>(
     model: DynamoModel<T, K>,
-    params: UpdateParams<T2, K, B>
+    params: UpdateParams<T2, K, B, R>
 ): UpdateCommandInput & {UpdateExpression: string | undefined;} {
   // Type mismatch with DynamoDB lib - update items within transactions require UpdateExpression to be present even if
   // it's undefined, it must not be absent
   const attr = {};
-  const {key, attributes, conditions} = params;
+  const {key, attributes, conditions, returnValues = 'all_new'} = params;
   Object.assign(attributes, ...model.params.updaters.map(updater => updater(attributes)));
 
   return {
     TableName: model.tableName,
     Key: key,
-    ReturnValues: 'ALL_NEW',
+    ReturnValues: returnValues === 'all_old' ? 'ALL_OLD' : 'ALL_NEW',
     UpdateExpression: buildUpdateExpression(attributes, attr),
     ConditionExpression: conditions && buildConditionExpression(conditions, attr),
     ReturnConsumedCapacity: getReturnedConsumedCapacity(model),

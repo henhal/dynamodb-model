@@ -29,6 +29,7 @@ import {
   ProjectionKeys,
   PutParams,
   QueryParams,
+  ReturnValue,
   ScanParams,
   ScanResult,
   Trigger,
@@ -210,14 +211,14 @@ export class DynamoModel<T extends Item, K extends KeyAttributes<T> = any, I ext
     return {item};
   }
 
-  async update<T2 extends T = T>(
-      params: UpdateParams<T2, K, B>
-  ): Promise<ItemResult<T2>> {
+  async update<T2 extends T = T, R extends ReturnValue = 'all_new'>(
+      params: UpdateParams<T2, K, B, R>
+  ): Promise<ItemResult<T2, R>> {
     const {Attributes: attributes} = await this.command(
         new UpdateCommand(createUpdateRequest(this, params)));
-    const item = this.convertItem<null, T2>(attributes);
+    const item: any = attributes && this.convertItem<null, T2>(attributes);
 
-    this.params.triggers.forEach(trigger => trigger(item, 'update', this));
+    this.params.triggers.forEach(trigger => trigger(params.key, 'update', this));
 
     return {item};
   }
