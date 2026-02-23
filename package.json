@@ -48,5 +48,8 @@
     "data-model",
     "typed-model",
     "typesafe"
-  ]
+  ],
+  "resolutions": {
+    "fast-xml-parser": ">=5.3.5"
+  }
 }
